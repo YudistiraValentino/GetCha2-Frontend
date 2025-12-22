@@ -21,27 +21,36 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/login`, {
+        // PERBAIKAN: Gunakan variabel BACKEND_URL, jangan hardcode link Railway!
+        // Pastikan tidak ada slash ganda (//)
+        const res = await fetch(`${BACKEND_URL}/api/admin/login`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json", 
+                "Accept": "application/json" // Wajib buat Laravel
+            },
             body: JSON.stringify({ email, password })
         });
+
+        // Cek dulu status response sebelum parsing JSON
+        if (!res.ok) {
+            // Kalau error 404/500, kita tangkap statusnya biar tau salahnya apa
+            throw new Error(`Server Error: ${res.status} ${res.statusText}`);
+        }
 
         const json = await res.json();
 
         if (json.success) {
-            // 1. Simpan Token & User di LocalStorage
             localStorage.setItem("token", json.data.token);
             localStorage.setItem("user", JSON.stringify(json.data.user));
-            
-            // 2. Redirect ke Dashboard
             router.push("/admin"); 
         } else {
             setError(json.message || "Login gagal.");
         }
-    } catch (err) {
+    } catch (err: any) {
         console.error(err);
-        setError("Gagal terhubung ke server.");
+        // Tampilkan pesan error asli biar gampang debugging
+        setError(err.message || "Gagal terhubung ke server.");
     } finally {
         setLoading(false);
     }
