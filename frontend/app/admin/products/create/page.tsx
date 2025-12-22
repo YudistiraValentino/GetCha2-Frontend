@@ -51,7 +51,7 @@ export default function CreateProductPage() {
     formData.append("variants", JSON.stringify(variants));
 
     try {
-        const res = await fetch(`${BACKEND_URL}/api/admin/products`, {
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/products`, {
             method: "POST",
             body: formData, // Jangan set Content-Type header manual saat pakai FormData!
         });

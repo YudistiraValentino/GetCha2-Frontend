@@ -98,7 +98,7 @@ export default function DashboardPage() {
 
   const fetchMenu = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/menu`);
+      const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/menu`);
       const json = await res.json();
       if (json.success) setProducts(json.data);
     } catch (error) { console.error(error); } finally { setLoading(false); }
@@ -106,7 +106,7 @@ export default function DashboardPage() {
 
   const fetchMyOrders = async (token: string) => {
       try {
-          const res = await fetch(`${BACKEND_URL}/api/my-orders`, {
+          const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/my-orders`, {
               headers: { "Authorization": `Bearer ${token}`, "Accept": "application/json" }
           });
           if (!res.ok) return;

@@ -44,7 +44,7 @@ export default function ActivityPage() {
         }
 
         try {
-            const res = await fetch('http://127.0.0.1:8000/api/my-orders', {
+            const res = await fetch('https://getcha2-backend-production.up.railway.app/api/my-orders', {
                 headers: {
                     "Authorization": `Bearer ${token}`,
                     "Accept": "application/json"

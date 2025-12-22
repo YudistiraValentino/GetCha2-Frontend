@@ -27,7 +27,7 @@ export default function OrderDetailPage() {
     
     const fetchOrder = async () => {
         try {
-            const res = await fetch(`${BACKEND_URL}/api/admin/orders/${id}`);
+            const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/orders/${id}`);
             const json = await res.json();
             if (json.success) {
                 setOrder(json.data);
@@ -48,7 +48,7 @@ export default function OrderDetailPage() {
   const handleUpdate = async () => {
     setUpdating(true);
     try {
-        const res = await fetch(`${BACKEND_URL}/api/admin/orders/${id}/status`, {
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/orders/${id}/status`, {
             method: "PUT", 
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ status, payment_status: paymentStatus })

@@ -33,7 +33,7 @@ export default function SettingsPage() {
     const token = localStorage.getItem("token");
 
     try {
-        const res = await fetch("http://127.0.0.1:8000/api/profile/update", {
+        const res = await fetch("https://getcha2-backend-production.up.railway.app/api/profile/update", {
             method: "PUT",
             headers: { 
                 "Content-Type": "application/json",
@@ -69,7 +69,7 @@ export default function SettingsPage() {
     const token = localStorage.getItem("token");
 
     try {
-        const res = await fetch("http://127.0.0.1:8000/api/profile/password", {
+        const res = await fetch("https://getcha2-backend-production.up.railway.app/api/profile/password", {
             method: "PUT",
             headers: { 
                 "Content-Type": "application/json",

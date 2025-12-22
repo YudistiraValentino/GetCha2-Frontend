@@ -15,7 +15,7 @@ export default function AdminOrdersPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/orders`);
+      const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/orders`);
       const json = await res.json();
       if (json.success) {
         setOrders(json.data);

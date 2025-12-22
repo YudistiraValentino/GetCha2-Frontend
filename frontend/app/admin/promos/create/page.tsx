@@ -39,7 +39,7 @@ export default function CreatePromoPage() {
     if(image) formData.append("image", image);
 
     try {
-        const res = await fetch(`${BACKEND_URL}/api/admin/promos`, {
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/promos`, {
             method: "POST",
             body: formData
         });

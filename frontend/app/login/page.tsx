@@ -23,7 +23,7 @@ export default function LoginPage() {
 
     try {
       // 3. Panggil API Backend (Sesuaikan URL dengan Laravel kamu)
-      const res = await fetch("http://127.0.0.1:8000/api/login", {
+      const res = await fetch("https://getcha2-backend-production.up.railway.app/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }), // Kirim data

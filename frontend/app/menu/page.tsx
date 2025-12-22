@@ -27,7 +27,7 @@ export default function MenuPage() {
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const res = await fetch('http://127.0.0.1:8000/api/menu');
+        const res = await fetch('https://getcha2-backend-production.up.railway.app/api/menu');
         const json = await res.json();
         if (json.success) setProducts(json.data);
       } catch (error) {

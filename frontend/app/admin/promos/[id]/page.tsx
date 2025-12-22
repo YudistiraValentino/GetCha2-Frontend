@@ -30,7 +30,7 @@ export default function EditPromoPage() {
   useEffect(() => {
       const fetchPromo = async () => {
           try {
-              const res = await fetch(`${BACKEND_URL}/api/admin/promos/${id}`);
+              const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/promos/${id}`);
               const json = await res.json();
               if(json.success) {
                   const d = json.data;
@@ -69,7 +69,7 @@ export default function EditPromoPage() {
     if(image) formData.append("image", image);
 
     try {
-        const res = await fetch(`${BACKEND_URL}/api/admin/promos/${id}`, {
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/promos/${id}`, {
             method: "POST", // Tetap POST karena FormData
             body: formData
         });

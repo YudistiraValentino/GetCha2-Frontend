@@ -21,7 +21,7 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-        const res = await fetch(`${BACKEND_URL}/api/admin/login`, {
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password })

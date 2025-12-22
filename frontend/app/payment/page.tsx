@@ -63,7 +63,7 @@ export default function PaymentPage() {
     setPromoMessage(null);
 
     try {
-        const res = await fetch(`${BACKEND_URL}/api/promos/apply`, {
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/promos/apply`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({ code: promoCodeInput, total_amount: subtotal })
@@ -113,7 +113,7 @@ export default function PaymentPage() {
             discount_amount: discountAmount 
         };
 
-        const res = await fetch(`${BACKEND_URL}/api/checkout`, {
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/checkout`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

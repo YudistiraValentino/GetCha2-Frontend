@@ -24,7 +24,7 @@ export default function DealsPage() {
   useEffect(() => {
     const fetchPromos = async () => {
         try {
-            const res = await fetch('http://127.0.0.1:8000/api/promos');
+            const res = await fetch('https://getcha2-backend-production.up.railway.app/api/promos');
             const json = await res.json();
             if (json.success) setPromos(json.data);
         } catch (error) {

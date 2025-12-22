@@ -22,7 +22,7 @@ export default function AdminUsersPage() {
   // 1. FETCH USERS
   const fetchUsers = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/users`);
+      const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/users`);
       const json = await res.json();
       if (json.success) setUsers(json.data);
     } catch (error) {
@@ -43,7 +43,7 @@ export default function AdminUsersPage() {
     setStats(null);
 
     try {
-        const res = await fetch(`${BACKEND_URL}/api/admin/users/${user.id}/stats`);
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/users/${user.id}/stats`);
         const json = await res.json();
         if (json.success) {
             setStats(json.data.stats);
@@ -62,7 +62,7 @@ export default function AdminUsersPage() {
     setUpdatingPoints(true);
 
     try {
-        const res = await fetch(`${BACKEND_URL}/api/admin/users/${selectedUser.id}/points`, {
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/users/${selectedUser.id}/points`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ points: parseInt(pointsInput) })

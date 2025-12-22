@@ -30,7 +30,7 @@ export default function EditProductPage() {
   useEffect(() => {
     const fetchProduct = async () => {
         try {
-            const res = await fetch(`${BACKEND_URL}/api/admin/products/${productId}`);
+            const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/products/${productId}`);
             const json = await res.json();
             
             if (json.success) {
@@ -91,7 +91,7 @@ export default function EditProductPage() {
 
     try {
         // Method tetap POST, tapi Laravel bacanya PUT karena ada _method
-        const res = await fetch(`${BACKEND_URL}/api/admin/products/${productId}`, {
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/products/${productId}`, {
             method: "POST", 
             body: formData,
         });

@@ -57,7 +57,7 @@ export default function ProductDetailPage() { // Tidak perlu props params
 
     const fetchDetail = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/menu/${id}`);
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/menu/${id}`);
         const json = await res.json();
 
         if (json.success) {

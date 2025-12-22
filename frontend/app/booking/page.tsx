@@ -32,7 +32,7 @@ export default function BookingPage() {
     const fetchActiveMap = async () => {
         try {
             // A. Panggil API sekali saja
-            const res = await fetch('http://127.0.0.1:8000/api/active-map');
+            const res = await fetch('https://getcha2-backend-production.up.railway.app/api/active-map');
             const data = await res.json();
 
             // B. Cek apakah ada data svg_content dari backend

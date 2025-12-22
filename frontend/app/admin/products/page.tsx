@@ -17,7 +17,7 @@ export default function AdminProductsPage() {
   // 1. FETCH DATA
   const fetchProducts = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/products`);
+      const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/products`);
       const json = await res.json();
       if (json.success) {
         setProducts(json.data);
@@ -38,7 +38,7 @@ export default function AdminProductsPage() {
     if (!confirm("Yakin ingin menghapus produk ini?")) return;
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/products/${id}`, {
+      const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/products/${id}`, {
         method: "DELETE",
       });
       

@@ -19,7 +19,7 @@ export default function MapManagerPage() {
   // 1. FETCH MAPS
   const fetchMaps = async () => {
     try {
-        const res = await fetch(`${BACKEND_URL}/api/admin/maps`);
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/maps`);
         const json = await res.json();
         if (json.success) setMaps(json.data);
     } catch (error) {
@@ -42,7 +42,7 @@ export default function MapManagerPage() {
     formData.append("map_file", file);
 
     try {
-        const res = await fetch(`${BACKEND_URL}/api/admin/maps`, {
+        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/maps`, {
             method: "POST",
             body: formData
         });
@@ -68,7 +68,7 @@ export default function MapManagerPage() {
   // 3. ACTIVATE MAP
   const handleActivate = async (id: number) => {
       try {
-          const res = await fetch(`${BACKEND_URL}/api/admin/maps/${id}/activate`, { method: "POST" });
+          const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/maps/${id}/activate`, { method: "POST" });
           if(res.ok) {
               fetchMaps(); // Refresh biar status berubah
           }
