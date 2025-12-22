@@ -1,0 +1,58 @@
+/* app/globals.css */
+@import "tailwindcss";
+
+@theme {
+  /* --- WARNA --- */
+  --color-navy-900: #182737;
+  --color-navy-800: #1D3253;
+  --color-gold-400: #FACC82;
+  --color-gold-500: #EFBD6C;
+  --color-gold-600: #E9B96B;
+  --color-yellow-400: #FFC94F;
+
+  /* --- ANIMASI --- */
+  
+  /* 1. Float Standar (Gerak Naik) */
+  --animate-float: float 6s ease-in-out infinite;
+  
+  /* 2. Float Reverse (Gerak Turun/Berlawanan) */
+  --animate-float-reverse: float-reverse 7s ease-in-out infinite;
+
+  /* 3. Float Slow (Gerak Pelan) */
+  --animate-float-slow: float 8s ease-in-out infinite;
+
+  /* 4. Progress Bar (UNTUK LOADING SCREEN) - INI YANG BARU */
+  --animate-progress: progress 1s infinite linear;
+
+  /* --- KEYFRAMES --- */
+
+  /* Keyframe Naik */
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+  }
+
+  /* Keyframe Turun */
+  @keyframes float-reverse {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(15px); }
+  }
+
+  /* Keyframe Progress Bar */
+  @keyframes progress {
+    0% { transform: scaleX(0); }
+    50% { transform: scaleX(0.7); }
+    100% { transform: scaleX(1); }
+  }
+}
+
+/* --- RESET & GLOBAL STYLES (Di luar @theme) --- */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
