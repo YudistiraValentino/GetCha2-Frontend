@@ -109,18 +109,21 @@ export default function PaymentPage() {
   };
 
   // --- FUNGSI CHECKOUT ---
+  // --- FUNGSI CHECKOUT ---
   const handlePayment = async () => {
     setIsProcessing(true);
     try {
         const token = localStorage.getItem("token");
 
-        // ✅ FIX: Kirim 'price' DAN 'unit_price' agar Backend tidak error "Undefined array key"
+        // ✅ Kita buat payload "Sakti" yang punya semua kunci (id, product_id, price, unit_price)
+        // Ini menjamin kodingan Backend Laravel versi manapun tidak akan error Undefined Key
         const mappedItems = cartItems.map(item => ({
-            product_id: item.id,
+            id: item.id,            // 👈 TAMBAHKAN INI (Untuk kodingan lama)
+            product_id: item.id,    // 👈 Untuk kodingan baru
             product_name: item.name,
             quantity: item.quantity,
-            unit_price: item.price, 
-            price: item.price,      // 👈 WAJIB ADA untuk validasi Backend Laravel
+            price: item.price,      // 👈 TAMBAHKAN INI (Untuk kodingan lama)
+            unit_price: item.price, // 👈 Untuk kodingan baru
             subtotal: item.price * item.quantity,
             variants: item.selectedVariant || null,
             modifiers: [] 
@@ -148,7 +151,6 @@ export default function PaymentPage() {
 
         const data = await res.json();
         
-        // Cek jika response sukses atau gagal
         if (!res.ok) {
             throw new Error(data.message || "Gagal memproses pesanan.");
         }
