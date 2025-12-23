@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from "next/link";
 import { Edit, Trash2, Plus, Search, Loader2 } from "lucide-react";
 import Image from "next/image";
 
-// Konfigurasi URL
-// Ganti baris 7 jadi begini:
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+// Konfigurasi URL Backend
+const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -17,7 +16,7 @@ export default function AdminProductsPage() {
   // 1. FETCH DATA
   const fetchProducts = async () => {
     try {
-      const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/products`);
+      const res = await fetch(`${BACKEND_URL}/api/admin/products`);
       const json = await res.json();
       if (json.success) {
         setProducts(json.data);
@@ -38,7 +37,7 @@ export default function AdminProductsPage() {
     if (!confirm("Yakin ingin menghapus produk ini?")) return;
 
     try {
-      const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/products/${id}`, {
+      const res = await fetch(`${BACKEND_URL}/api/admin/products/${id}`, {
         method: "DELETE",
       });
       
@@ -53,19 +52,41 @@ export default function AdminProductsPage() {
     }
   };
 
-  // Helper Gambar
+  // 3. FILTER LOGIC
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [products, searchTerm]);
+
+  // 4. HELPER GAMBAR (FIXED)
   const getImageUrl = (path: string) => {
-    if (!path) return "/placeholder.png";
+    if (!path) return "/Image/placeholder.png";
     if (path.startsWith("http")) return path;
-    return `${BACKEND_URL}${path}`;
+
+    // Bersihkan path dari string 'public/' jika terbawa dari database
+    let cleanPath = path.replace('public/', '');
+
+    // Pastikan diawali dengan satu garis miring
+    if (!cleanPath.startsWith('/')) {
+      cleanPath = '/' + cleanPath;
+    }
+
+    // Jika path tidak diawali /storage, /images, atau /maps, tambahkan /storage
+    if (!cleanPath.startsWith('/storage') && !cleanPath.startsWith('/images') && !cleanPath.startsWith('/maps')) {
+      cleanPath = '/storage' + cleanPath;
+    }
+
+    return `${BACKEND_URL}${cleanPath}`;
   };
 
-  // Filter Search
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-navy-900" /></div>;
+  if (loading) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <Loader2 className="animate-spin text-navy-900" size={40} />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -111,7 +132,13 @@ export default function AdminProductsPage() {
                         <tr key={product.id} className="hover:bg-gray-50 transition">
                             <td className="px-6 py-4">
                                 <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 relative bg-white">
-                                    <Image src={getImageUrl(product.image)} alt={product.name} fill className="object-contain p-1" unoptimized />
+                                    <Image 
+                                      src={getImageUrl(product.image)} 
+                                      alt={product.name} 
+                                      fill 
+                                      className="object-contain p-1" 
+                                      unoptimized 
+                                    />
                                 </div>
                             </td>
                             <td className="px-6 py-4 font-bold text-navy-900">{product.name}</td>

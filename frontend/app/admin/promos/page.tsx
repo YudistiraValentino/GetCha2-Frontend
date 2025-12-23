@@ -2,23 +2,24 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from "next/link";
-import { Edit, Trash2, Plus, Ticket, Calendar, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Edit, Trash2, Plus, Ticket, Calendar, CheckCircle, XCircle, Loader2 } from "lucide-center";
 import Image from "next/image";
 
-// Ganti baris 7 jadi begini:
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+// Konfigurasi URL Backend Railway
+const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
 
 export default function AdminPromosPage() {
   const [promos, setPromos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 1. FETCH DATA
   const fetchPromos = async () => {
     try {
-      const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/promos`);
+      const res = await fetch(`${BACKEND_URL}/api/admin/promos`);
       const json = await res.json();
       if (json.success) setPromos(json.data);
     } catch (error) {
-      console.error(error);
+      console.error("Gagal fetch promos:", error);
     } finally {
       setLoading(false);
     }
@@ -26,23 +27,46 @@ export default function AdminPromosPage() {
 
   useEffect(() => { fetchPromos(); }, []);
 
+  // 2. DELETE FUNCTION
   const handleDelete = async (id: number) => {
     if (!confirm("Hapus promo ini?")) return;
     try {
-        await fetch(`${BACKEND_URL}/api/admin/promos/${id}`, { method: "DELETE" });
-        fetchPromos();
-    } catch (e) { alert("Gagal hapus"); }
+        const res = await fetch(`${BACKEND_URL}/api/admin/promos/${id}`, { method: "DELETE" });
+        if (res.ok) {
+            alert("Promo berhasil dihapus!");
+            fetchPromos();
+        }
+    } catch (e) { 
+        alert("Gagal hapus promo"); 
+    }
   };
 
+  // 3. HELPER GAMBAR (SINKRON DENGAN RAILWAY)
   const getImageUrl = (path: string) => {
-      if (!path) return "/placeholder.png";
-      return path.startsWith("http") ? path : `${BACKEND_URL}${path}`;
+    if (!path) return "/Image/placeholder.png";
+    if (path.startsWith("http")) return path;
+
+    // Bersihkan path dari string 'public/' jika terbawa dari database
+    let cleanPath = path.replace('public/', '');
+
+    // Pastikan diawali dengan satu garis miring
+    if (!cleanPath.startsWith('/')) {
+        cleanPath = '/' + cleanPath;
+    }
+
+    // Jika path tidak diawali /storage, /images, atau /maps, tambahkan /storage
+    if (!cleanPath.startsWith('/storage') && !cleanPath.startsWith('/images') && !cleanPath.startsWith('/maps')) {
+        cleanPath = '/storage' + cleanPath;
+    }
+
+    return `${BACKEND_URL}${cleanPath}`;
   };
 
-  if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-navy-900"/></div>;
+  if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-navy-900" size={40}/></div>;
 
   return (
     <div>
+      {/* HEADER */}
       <div className="flex justify-between items-center mb-8">
         <div>
             <h1 className="text-2xl font-bold text-navy-900">Deals & Promos</h1>
@@ -53,13 +77,20 @@ export default function AdminPromosPage() {
         </Link>
       </div>
 
+      {/* GRID PROMO */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {promos.map((promo) => (
             <div key={promo.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group hover:shadow-md transition">
                 {/* Image Cover */}
                 <div className="h-40 bg-gray-100 relative overflow-hidden">
                     {promo.image ? (
-                        <Image src={getImageUrl(promo.image)} alt={promo.title} fill className="object-cover group-hover:scale-105 transition duration-500" unoptimized/>
+                        <Image 
+                            src={getImageUrl(promo.image)} 
+                            alt={promo.title} 
+                            fill 
+                            className="object-cover group-hover:scale-105 transition duration-500" 
+                            unoptimized
+                        />
                     ) : (
                         <div className="flex items-center justify-center h-full text-gray-300"><Ticket size={40}/></div>
                     )}

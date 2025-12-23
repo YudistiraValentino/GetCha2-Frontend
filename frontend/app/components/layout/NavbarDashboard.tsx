@@ -3,17 +3,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from "next/navigation";
-import { ShoppingCart, Search, User, X, ChevronRight, Loader2 } from 'lucide-react'; // Tambah Loader2
+import { ShoppingCart, Search, User, X, ChevronRight, Loader2 } from 'lucide-react';
 import { useCart } from '@/app/context/CartContext';
-// HAPUS IMPORT DATA STATIS INI
-// import { products, Product } from "@/app/data/menuData"; 
 import { useTransition } from "@/app/context/TransitionContext";
 
 // Definisi Tipe Data sesuai API Laravel
 interface ProductAPI {
   id: number;
   name: string;
-  category_name: string; // Sesuaikan dengan respon API
+  category_name: string; 
   price: string;
   image: string;
   description: string;
@@ -24,26 +22,27 @@ const NavbarDashboard = () => {
   const router = useRouter();
   const { triggerTransition } = useTransition();
 
+  // URL Backend Railway
+  const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
+
   // --- STATE SEARCH ---
   const [isSearchActive, setIsSearchActive] = useState(false); 
   const [searchQuery, setSearchQuery] = useState("");
   
-  // STATE BARU: Menampung data dari API
   const [apiProducts, setApiProducts] = useState<ProductAPI[]>([]);
-  const [suggestions, setSuggestions] = useState<ProductAPI[]>([]); // Ganti tipe data
+  const [suggestions, setSuggestions] = useState<ProductAPI[]>([]); 
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [loadingData, setLoadingData] = useState(false); // Indikator loading data awal
+  const [loadingData, setLoadingData] = useState(false); 
   
   const searchRef = useRef<HTMLDivElement>(null); 
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 1. FETCH DATA DARI API LARAVEL SAAT LOAD
-  // Supaya pencarian cepat (client-side filtering), kita ambil semua menu sekali di awal
   useEffect(() => {
     const fetchProducts = async () => {
         setLoadingData(true);
         try {
-            const res = await fetch('https://getcha2-backend-production.up.railway.app/api/menu');
+            const res = await fetch(`${BACKEND_URL}/api/menu`);
             const json = await res.json();
             if (json.success) {
                 setApiProducts(json.data);
@@ -78,7 +77,6 @@ const NavbarDashboard = () => {
     if (query.trim().length > 0) {
       const lowerQ = query.toLowerCase();
       
-      // Filter dari apiProducts (Data Database)
       const matches = apiProducts.filter(p => 
         p.name.toLowerCase().includes(lowerQ) || 
         (p.category_name && p.category_name.toLowerCase().includes(lowerQ))
@@ -107,11 +105,21 @@ const NavbarDashboard = () => {
     }
   };
 
-  // Helper URL Gambar (Penting karena API mungkin kirim path relatif)
+  // 🔥 HELPER: Ambil Full URL Gambar (FIXED)
   const getImageUrl = (path: string) => {
     if (!path) return "/Image/placeholder.png";
     if (path.startsWith("http")) return path; 
-    return `http://127.0.0.1:8000${path}`; 
+
+    // Bersihkan path
+    let cleanPath = path.replace('public/', '');
+    if (!cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
+
+    // Tambahkan prefix storage jika perlu
+    if (!cleanPath.startsWith('/storage') && !cleanPath.startsWith('/images') && !cleanPath.startsWith('/maps')) {
+        cleanPath = '/storage' + cleanPath;
+    }
+
+    return `${BACKEND_URL}${cleanPath}`; 
   };
 
   useEffect(() => {
@@ -173,7 +181,7 @@ const NavbarDashboard = () => {
                     placeholder={loadingData ? "Loading data..." : "Cari 'Latte'..."}
                     value={searchQuery}
                     onChange={handleInput}
-                    disabled={loadingData} // Disable kalau data belum siap
+                    disabled={loadingData}
                     className="bg-transparent border-none outline-none text-sm text-white w-full px-3 py-2.5 placeholder-gray-500 disabled:opacity-50"
                 />
                 {loadingData && <Loader2 size={16} className="mr-2 animate-spin text-gray-400"/>}
@@ -199,7 +207,7 @@ const NavbarDashboard = () => {
                                     className="flex items-center gap-4 p-4 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0 cursor-pointer group"
                                 >
                                     <div className="w-12 h-12 relative bg-gray-100 rounded-xl overflow-hidden shrink-0 border border-gray-200">
-                                        <Image src={getImageUrl(product.image)} alt={product.name} fill className="object-contain p-1" />
+                                        <Image src={getImageUrl(product.image)} alt={product.name} fill className="object-contain p-1" unoptimized />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-bold text-navy-900 group-hover:text-blue-600 truncate">{product.name}</p>

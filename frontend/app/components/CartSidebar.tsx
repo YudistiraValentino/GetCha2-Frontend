@@ -6,8 +6,7 @@ import { useCart } from "@/app/context/CartContext";
 import { useRouter } from "next/navigation"; 
 
 // URL Backend Laravel
-// Ganti baris 7 jadi begini:
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
 
 export default function CartSidebar() {
   const router = useRouter(); 
@@ -21,11 +20,25 @@ export default function CartSidebar() {
     cartTotal,
   } = useCart();
 
-  // Helper: Ambil Full URL Gambar
+  // 🔥 HELPER: Ambil Full URL Gambar (FIXED)
   const getImageUrl = (path: string) => {
     if (!path) return "/Image/placeholder.png";
     if (path.startsWith("http")) return path; 
-    return `${BACKEND_URL}${path}`; 
+
+    // 1. Bersihkan path dari string 'public/' jika terbawa dari database
+    let cleanPath = path.replace('public/', '');
+
+    // 2. Pastikan diawali dengan satu garis miring
+    if (!cleanPath.startsWith('/')) {
+        cleanPath = '/' + cleanPath;
+    }
+
+    // 3. Jika path tidak diawali /storage, /images, atau /maps, tambahkan /storage
+    if (!cleanPath.startsWith('/storage') && !cleanPath.startsWith('/images') && !cleanPath.startsWith('/maps')) {
+        cleanPath = '/storage' + cleanPath;
+    }
+
+    return `${BACKEND_URL}${cleanPath}`; 
   };
 
   const handleProceedToCheckout = () => {
@@ -78,7 +91,6 @@ export default function CartSidebar() {
               <div key={item.internalId} className="flex gap-4">
                 {/* Gambar Kecil */}
                 <div className="relative w-20 h-20 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
-                  {/* 🔥 UPDATE: Pakai tag img biasa biar gambar dari Laravel muncul */}
                   <img 
                     src={getImageUrl(item.image)} 
                     alt={item.name} 
@@ -92,11 +104,9 @@ export default function CartSidebar() {
                     <h4 className="font-bold text-navy-900 line-clamp-1">{item.name}</h4>
                     <p className="text-xs text-gold-600 font-bold uppercase">{item.category}</p>
                     
-                    {/* Tampilkan Varian/Modifier jika ada */}
                     {(item.selectedVariant || item.selectedModifiers) && (
                         <div className="text-[10px] text-gray-400 mt-1 leading-tight">
                             {item.selectedVariant && <span>{item.selectedVariant}</span>}
-                            {/* 🔥 UPDATE: Pakai String() biar aman dari error object */}
                             {item.selectedModifiers && Object.values(item.selectedModifiers).map((mod, idx) => (
                                 <span key={idx}> • {String(mod)}</span>
                             ))}
@@ -109,7 +119,6 @@ export default function CartSidebar() {
                       Rp {(item.price * item.quantity).toLocaleString("id-ID")}
                     </p>
                     
-                    {/* Kontrol Plus/Minus */}
                     <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-2 py-1">
                        <button onClick={() => updateQuantity(item.internalId, 'minus')} className="text-gray-500 hover:text-navy-900 font-bold text-lg">-</button>
                        <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>

@@ -15,8 +15,8 @@ import { Sparkles, Flame, Clock, ArrowRight, User as UserIcon, Loader2 } from "l
 import Link from "next/link";
 import { useRouter } from "next/navigation"; 
 
-// 👇 KONFIGURASI URL BACKEND
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+// ✅ URL Backend Railway
+const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
 
 interface ProductAPI {
   id: number;
@@ -64,18 +64,14 @@ export default function DashboardPage() {
     fetchMenu();
   }, []);
 
-  // 2. REALTIME LISTENER (FIXED TYPE ERROR)
+  // 2. REALTIME LISTENER
   useEffect(() => {
     if (user) {
-        console.log("🔌 Connecting to Reverb...");
         const echo = createEcho();
 
-        // 👇 FIX: Cek dulu apakah echo berhasil dibuat (tidak null)
         if (echo) {
             echo.channel('public-orders')
                 .listen('.order.updated', (e: any) => {
-                    console.log("🔥 EVENT MASUK:", e);
-                    
                     if (e.order.customer_name === user.name) {
                         // Update List Order
                         setMyOrders((prevOrders) => {
@@ -94,7 +90,6 @@ export default function DashboardPage() {
         }
 
         return () => {
-            // 👇 FIX: Cek null juga saat cleanup (unmount)
             if (echo) {
                 echo.leave('public-orders');
             }
@@ -104,15 +99,19 @@ export default function DashboardPage() {
 
   const fetchMenu = async () => {
     try {
-      const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/menu`);
+      const res = await fetch(`${BACKEND_URL}/api/menu`);
       const json = await res.json();
       if (json.success) setProducts(json.data);
-    } catch (error) { console.error(error); } finally { setLoading(false); }
+    } catch (error) { 
+        console.error("Gagal fetch menu:", error); 
+    } finally { 
+        setLoading(false); 
+    }
   };
 
   const fetchMyOrders = async (token: string) => {
       try {
-          const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/my-orders`, {
+          const res = await fetch(`${BACKEND_URL}/api/my-orders`, {
               headers: { "Authorization": `Bearer ${token}`, "Accept": "application/json" }
           });
           if (!res.ok) return;
@@ -121,26 +120,17 @@ export default function DashboardPage() {
       } catch (error) { console.error(error); }
   };
 
-  // 👇 FUNGSI PENTING: MEMPERBAIKI URL GAMBAR (UPDATED)
+  // 🔥 HELPER: Fix URL Gambar (Sama dengan Navbar & Admin)
   const getImageUrl = (path: string) => {
     if (!path) return "/Image/placeholder.png"; 
-    
-    // 1. Jika path sudah URL lengkap, return langsung
     if (path.startsWith("http")) return path;
 
-    // 2. Bersihkan path dari prefix 'public/' yang kadang tersimpan di DB
     let cleanPath = path.replace('public/', '');
     if (!cleanPath.startsWith('/')) {
         cleanPath = '/' + cleanPath;
     }
 
-    // 3. LOGIC DETEKSI FOLDER
-    if (cleanPath.startsWith('/images') || cleanPath.startsWith('/maps')) {
-        return `${BACKEND_URL}${cleanPath}`;
-    }
-
-    // Default: Asumsikan file ada di dalam STORAGE link
-    if (!cleanPath.startsWith('/storage')) {
+    if (!cleanPath.startsWith('/storage') && !cleanPath.startsWith('/images') && !cleanPath.startsWith('/maps')) {
         cleanPath = '/storage' + cleanPath;
     }
 
@@ -153,7 +143,6 @@ export default function DashboardPage() {
   const categories = useMemo(() => ["All", ...Array.from(new Set(products.map(p => p.category_name)))], [products]);
   const filteredProducts = activeCategory === "All" ? products : products.filter(p => p.category_name === activeCategory);
   
-  // 👇 UPDATE MAPPING KE CARD
   const mapToCard = (p: ProductAPI) => ({
     id: p.id, 
     name: p.name, 
@@ -187,7 +176,6 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-gray-50 font-sans flex flex-col justify-between">
       
-      {/* NOTIFIKASI POPUP */}
       <AnimatePresence>
         {notification && (
             <OrderNotification 
@@ -203,7 +191,6 @@ export default function DashboardPage() {
 
           <div className="container mx-auto px-4 md:px-12 pt-28 space-y-16 pb-20">
             
-            {/* USER WELCOME */}
             {user && (
                 <section className="animate-in slide-in-from-top-4 fade-in duration-500">
                     <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-8">
@@ -240,7 +227,6 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
                                 ))}
-                                {myOrders.length > 2 && <div className="col-span-full text-center mt-2"><button className="text-xs text-gray-400 hover:text-navy-900">View All History</button></div>}
                             </div>
                         ) : (
                             <div className="text-center py-4 text-gray-400 text-sm bg-gray-50 rounded-xl border border-dashed border-gray-200">No active orders right now.</div>
@@ -249,10 +235,8 @@ export default function DashboardPage() {
                 </section>
             )}
 
-            {/* HERO CAROUSEL */}
             <section><HeroCarousel slides={heroSlidesData} /></section>
 
-            {/* NEW ARRIVALS */}
             <section>
               <div className="flex justify-between items-end mb-6 pb-4 border-b border-gray-200">
                 <div className="flex items-center gap-3">
@@ -271,35 +255,6 @@ export default function DashboardPage() {
               </div>
             </section>
 
-            {/* BEST SELLERS */}
-            <section>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="bg-red-100 p-2.5 rounded-xl text-red-500 shadow-sm shadow-red-100"><Flame size={24} fill="currentColor" /></div>
-                <div><span className="text-red-500 font-bold tracking-widest text-[10px] uppercase block mb-1">Weekly Top Pick</span><h2 className="text-2xl md:text-3xl font-serif font-bold text-navy-900 leading-none">Best <span className="text-gold-500 underline decoration-4 underline-offset-4">Sellers</span></h2></div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {bestSellers.slice(0, promoBanner.isActive ? 2 : 4).map((product, idx) => (
-                  <div key={product.id} className="relative h-full">
-                        <div className="absolute -top-3 -left-3 z-20 w-8 h-8 bg-gradient-to-br from-navy-900 to-navy-700 text-white font-bold rounded-full flex items-center justify-center border-2 border-white shadow-lg text-sm">#{idx + 1}</div>
-                        {idx === 0 && <div className="absolute -top-6 -left-2 z-30 text-gold-500 transform -rotate-12"><Sparkles size={24} fill="currentColor" /></div>}
-                        <ProductCard product={mapToCard(product)} />
-                  </div>
-                ))}
-                {promoBanner.isActive && (
-                    <div className={`col-span-2 bg-gradient-to-br ${promoBanner.gradientFrom} ${promoBanner.gradientTo} rounded-2xl p-6 md:p-10 text-white flex flex-col justify-center relative overflow-hidden group cursor-pointer shadow-xl transition-all hover:scale-[1.01]`}>
-                        <div className="absolute right-0 top-0 w-48 h-48 bg-gold-500 rounded-full blur-[80px] opacity-20 group-hover:opacity-30 transition-opacity"></div>
-                        <div className="relative z-10">
-                            <span className={`bg-gold-500 text-navy-900 text-[10px] font-bold px-2 py-1 rounded mb-4 inline-block`}>{promoBanner.badge}</span>
-                            <h3 className="text-2xl md:text-3xl font-bold font-serif mb-3 leading-tight">{promoBanner.title}</h3>
-                            <p className="text-gray-300 text-sm mb-6 max-w-sm leading-relaxed">{promoBanner.subtitle}</p>
-                            <Link href={promoBanner.ctaLink} className={`flex items-center gap-2 font-bold text-sm ${promoBanner.accentColor} hover:text-white transition-colors`}>{promoBanner.ctaText} <ArrowRight size={18}/></Link>
-                        </div>
-                    </div>
-                )}
-              </div>
-            </section>
-
-            {/* FULL MENU */}
             <section id="menu-section">
                 <div className="sticky top-20 z-30 bg-gray-50/95 backdrop-blur-md py-4 mb-6 transition-all border-b border-gray-200 -mx-4 px-4 md:-mx-12 md:px-12">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -316,14 +271,12 @@ export default function DashboardPage() {
                         {filteredProducts.map((product) => (
                             <motion.div layout key={product.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }}>
                                 <div className="relative h-full">
-                                   {isNewBadge(product.created_at) && <div className="absolute top-2 right-2 z-10 bg-blue-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm">NEW</div>}
                                    <ProductCard product={mapToCard(product)} />
                                 </div>
                             </motion.div>
                         ))}
                     </AnimatePresence>
                 </motion.div>
-                <div className="mt-16 mb-8 text-center opacity-30"><p className="text-[10px] uppercase tracking-widest font-bold">You've reached the end</p></div>
             </section>
           </div>
       </div>
