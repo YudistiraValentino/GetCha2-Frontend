@@ -16,8 +16,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation"; 
 
 // 👇 KONFIGURASI URL BACKEND
-// Ganti baris 7 jadi begini:
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
 interface ProductAPI {
   id: number;
   name: string;
@@ -64,34 +64,40 @@ export default function DashboardPage() {
     fetchMenu();
   }, []);
 
-  // 2. REALTIME LISTENER
+  // 2. REALTIME LISTENER (FIXED TYPE ERROR)
   useEffect(() => {
     if (user) {
         console.log("🔌 Connecting to Reverb...");
         const echo = createEcho();
 
-        echo.channel('public-orders')
-            .listen('.order.updated', (e: any) => {
-                console.log("🔥 EVENT MASUK:", e);
-                
-                if (e.order.customer_name === user.name) {
-                    // Update List Order
-                    setMyOrders((prevOrders) => {
-                        const exists = prevOrders.find(o => o.id === e.order.id);
-                        if (exists) {
-                            return prevOrders.map(o => o.id === e.order.id ? { ...o, ...e.order, items: o.items } : o);
-                        } else {
-                            return [e.order, ...prevOrders];
-                        }
-                    });
+        // 👇 FIX: Cek dulu apakah echo berhasil dibuat (tidak null)
+        if (echo) {
+            echo.channel('public-orders')
+                .listen('.order.updated', (e: any) => {
+                    console.log("🔥 EVENT MASUK:", e);
+                    
+                    if (e.order.customer_name === user.name) {
+                        // Update List Order
+                        setMyOrders((prevOrders) => {
+                            const exists = prevOrders.find(o => o.id === e.order.id);
+                            if (exists) {
+                                return prevOrders.map(o => o.id === e.order.id ? { ...o, ...e.order, items: o.items } : o);
+                            } else {
+                                return [e.order, ...prevOrders];
+                            }
+                        });
 
-                    // Tampilkan Notifikasi
-                    setNotification(e.order);
-                }
-            });
+                        // Tampilkan Notifikasi
+                        setNotification(e.order);
+                    }
+                });
+        }
 
         return () => {
-            echo.leave('public-orders');
+            // 👇 FIX: Cek null juga saat cleanup (unmount)
+            if (echo) {
+                echo.leave('public-orders');
+            }
         };
     }
   }, [user]);
@@ -129,14 +135,11 @@ export default function DashboardPage() {
     }
 
     // 3. LOGIC DETEKSI FOLDER
-    // Jika path diawali '/images' atau '/maps', kemungkinan besar filenya di folder public langsung (bukan storage)
-    // Jadi URL-nya: http://127.0.0.1:8000/images/foto.jpg
     if (cleanPath.startsWith('/images') || cleanPath.startsWith('/maps')) {
         return `${BACKEND_URL}${cleanPath}`;
     }
 
     // Default: Asumsikan file ada di dalam STORAGE link
-    // URL-nya: http://127.0.0.1:8000/storage/products/foto.jpg
     if (!cleanPath.startsWith('/storage')) {
         cleanPath = '/storage' + cleanPath;
     }
@@ -156,7 +159,7 @@ export default function DashboardPage() {
     name: p.name, 
     category: p.category_name, 
     price: parseFloat(p.price), 
-    image: getImageUrl(p.image), // 👈 Gunakan helper baru
+    image: getImageUrl(p.image), 
     description: p.description, 
     createdAt: p.created_at, 
     soldCount: 0, 
