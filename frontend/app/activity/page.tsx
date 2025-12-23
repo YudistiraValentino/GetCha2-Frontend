@@ -69,28 +69,34 @@ export default function ActivityPage() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (user.name) {
         const echo = createEcho();
-        // Subscribe public channel (sesuai config backend kita sebelumnya)
-        echo.channel('public-orders')
-            .listen('.order.updated', (e: any) => {
-                if (e.order.customer_name === user.name) {
-                    setOrders((prev) => {
-                        const exists = prev.find(o => o.id === e.order.id);
-                        if (exists) {
-                            // Update status order yang ada
-                            return prev.map(o => o.id === e.order.id ? { ...o, status: e.order.status } : o);
-                        }
-                        return prev;
-                    });
-                }
-            });
 
-        return () => { echo.leave('public-orders'); };
+        // 👇 FIX: Cek dulu apakah echo ada (tidak null) sebelum dipanggil
+        if (echo) {
+            echo.channel('public-orders')
+                .listen('.order.updated', (e: any) => {
+                    if (e.order.customer_name === user.name) {
+                        setOrders((prev) => {
+                            const exists = prev.find(o => o.id === e.order.id);
+                            if (exists) {
+                                // Update status order yang ada
+                                return prev.map(o => o.id === e.order.id ? { ...o, status: e.order.status } : o);
+                            }
+                            return prev;
+                        });
+                    }
+                });
+        }
+
+        // Cleanup: Disconnect saat pindah halaman
+        return () => { 
+            if (echo) {
+                echo.leave('public-orders'); 
+            }
+        };
     }
   }, []);
 
   // 3. FILTER LOGIC: Active vs History
-  // Active: pending, confirmed, processing, ready
-  // History: completed, cancelled
   const activeOrders = orders.filter(o => !['completed', 'cancelled'].includes(o.status));
   const historyOrders = orders.filter(o => ['completed', 'cancelled'].includes(o.status));
 
@@ -99,16 +105,16 @@ export default function ActivityPage() {
     if(confirm("Masukkan item ini ke keranjang lagi?")) {
         items.forEach(item => {
             addToCart({
-                id: item.id, // Pastikan ID produk valid
+                id: item.id,
                 name: item.product_name,
                 price: item.price, 
                 quantity: item.quantity,
-                image: "", // API order history mungkin ga kirim gambar, kasih default/kosong
+                image: "", // Default empty
                 category: "Reorder",
                 selectedVariant: item.variants || undefined,
             });
         });
-        router.push('/cart'); // Buka cart (atau dashboard yg ada cartnya)
+        router.push('/cart');
     }
   };
 
@@ -222,7 +228,6 @@ export default function ActivityPage() {
                             </button>
                         ) : (
                             <div className="text-right">
-                                {/* Kalau butuh queue number, pastikan backend kirim */}
                                 <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Status</p>
                                 <p className="text-sm font-bold text-gold-500 uppercase">{order.status}</p>
                             </div>
