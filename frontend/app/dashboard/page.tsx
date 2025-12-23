@@ -122,20 +122,31 @@ export default function DashboardPage() {
 
   // 🔥 HELPER: Fix URL Gambar (Sama dengan Navbar & Admin)
   const getImageUrl = (path: string) => {
-    if (!path) return "/Image/placeholder.png"; 
-    if (path.startsWith("http")) return path;
+  if (!path) return "/Image/placeholder.png";
+  if (path.startsWith("http")) return path;
 
-    let cleanPath = path.replace('public/', '');
-    if (!cleanPath.startsWith('/')) {
-        cleanPath = '/' + cleanPath;
-    }
+  const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
+  
+  // 1. Bersihkan path dari string 'public/' jika terbawa dari database
+  let cleanPath = path.replace('public/', '');
 
-    if (!cleanPath.startsWith('/storage') && !cleanPath.startsWith('/images') && !cleanPath.startsWith('/maps')) {
-        cleanPath = '/storage' + cleanPath;
-    }
+  // 2. Pastikan diawali dengan satu garis miring
+  if (!cleanPath.startsWith('/')) {
+    cleanPath = '/' + cleanPath;
+  }
 
-    return `${BACKEND_URL}${cleanPath}`;
-  };
+  // 3. JANGAN tambahkan /storage jika path sudah diawali /images atau /maps
+  // Karena data kamu di DB sekarang adalah /images/namafile.png
+  if (
+    !cleanPath.startsWith('/storage') && 
+    !cleanPath.startsWith('/images') && 
+    !cleanPath.startsWith('/maps')
+  ) {
+    cleanPath = '/storage' + cleanPath;
+  }
+
+  return `${BACKEND_URL}${cleanPath}`;
+};
 
   // Logic Sorting & Filtering
   const newArrivals = useMemo(() => [...products].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 4), [products]);

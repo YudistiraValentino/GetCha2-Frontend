@@ -107,20 +107,31 @@ const NavbarDashboard = () => {
 
   // 🔥 HELPER: Ambil Full URL Gambar (FIXED)
   const getImageUrl = (path: string) => {
-    if (!path) return "/Image/placeholder.png";
-    if (path.startsWith("http")) return path; 
+  if (!path) return "/Image/placeholder.png";
+  if (path.startsWith("http")) return path;
 
-    // Bersihkan path
-    let cleanPath = path.replace('public/', '');
-    if (!cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
+  const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
+  
+  // 1. Bersihkan path dari string 'public/' jika terbawa dari database
+  let cleanPath = path.replace('public/', '');
 
-    // Tambahkan prefix storage jika perlu
-    if (!cleanPath.startsWith('/storage') && !cleanPath.startsWith('/images') && !cleanPath.startsWith('/maps')) {
-        cleanPath = '/storage' + cleanPath;
-    }
+  // 2. Pastikan diawali dengan satu garis miring
+  if (!cleanPath.startsWith('/')) {
+    cleanPath = '/' + cleanPath;
+  }
 
-    return `${BACKEND_URL}${cleanPath}`; 
-  };
+  // 3. JANGAN tambahkan /storage jika path sudah diawali /images atau /maps
+  // Karena data kamu di DB sekarang adalah /images/namafile.png
+  if (
+    !cleanPath.startsWith('/storage') && 
+    !cleanPath.startsWith('/images') && 
+    !cleanPath.startsWith('/maps')
+  ) {
+    cleanPath = '/storage' + cleanPath;
+  }
+
+  return `${BACKEND_URL}${cleanPath}`;
+};
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

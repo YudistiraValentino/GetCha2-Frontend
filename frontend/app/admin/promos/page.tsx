@@ -43,24 +43,31 @@ export default function AdminPromosPage() {
 
   // 3. HELPER GAMBAR (SINKRON DENGAN RAILWAY)
   const getImageUrl = (path: string) => {
-    if (!path) return "/Image/placeholder.png";
-    if (path.startsWith("http")) return path;
+  if (!path) return "/Image/placeholder.png";
+  if (path.startsWith("http")) return path;
 
-    // Bersihkan path dari string 'public/' jika terbawa dari database
-    let cleanPath = path.replace('public/', '');
+  const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
+  
+  // 1. Bersihkan path dari string 'public/' jika terbawa dari database
+  let cleanPath = path.replace('public/', '');
 
-    // Pastikan diawali dengan satu garis miring
-    if (!cleanPath.startsWith('/')) {
-        cleanPath = '/' + cleanPath;
-    }
+  // 2. Pastikan diawali dengan satu garis miring
+  if (!cleanPath.startsWith('/')) {
+    cleanPath = '/' + cleanPath;
+  }
 
-    // Jika path tidak diawali /storage, /images, atau /maps, tambahkan /storage
-    if (!cleanPath.startsWith('/storage') && !cleanPath.startsWith('/images') && !cleanPath.startsWith('/maps')) {
-        cleanPath = '/storage' + cleanPath;
-    }
+  // 3. JANGAN tambahkan /storage jika path sudah diawali /images atau /maps
+  // Karena data kamu di DB sekarang adalah /images/namafile.png
+  if (
+    !cleanPath.startsWith('/storage') && 
+    !cleanPath.startsWith('/images') && 
+    !cleanPath.startsWith('/maps')
+  ) {
+    cleanPath = '/storage' + cleanPath;
+  }
 
-    return `${BACKEND_URL}${cleanPath}`;
-  };
+  return `${BACKEND_URL}${cleanPath}`;
+};
 
   if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-navy-900" size={40}/></div>;
 
