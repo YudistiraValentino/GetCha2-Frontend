@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from "next/link";
-import { Edit, Trash2, Plus, Ticket, Calendar, CheckCircle, XCircle, Loader2 } from "lucide-center";
+import { Edit, Trash2, Plus, Ticket, Calendar, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import Image from "next/image";
 
 // Konfigurasi URL Backend Railway
