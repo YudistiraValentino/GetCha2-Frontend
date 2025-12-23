@@ -110,34 +110,38 @@ export default function PaymentPage() {
 
   // --- FUNGSI CHECKOUT ---
   // --- FUNGSI CHECKOUT ---
-  const handlePayment = async () => {
-    setIsProcessing(true);
-    try {
-        const token = localStorage.getItem("token");
+ const handlePayment = async () => {
+  setIsProcessing(true);
+  try {
+      const token = localStorage.getItem("token");
 
-        // ✅ Kita buat payload "Sakti" yang punya semua kunci (id, product_id, price, unit_price)
-        // Ini menjamin kodingan Backend Laravel versi manapun tidak akan error Undefined Key
-        const mappedItems = cartItems.map(item => ({
-            id: item.id,            // 👈 TAMBAHKAN INI (Untuk kodingan lama)
-            product_id: item.id,    // 👈 Untuk kodingan baru
-            product_name: item.name,
-            quantity: item.quantity,
-            price: item.price,      // 👈 TAMBAHKAN INI (Untuk kodingan lama)
-            unit_price: item.price, // 👈 Untuk kodingan baru
-            subtotal: item.price * item.quantity,
-            variants: item.selectedVariant || null,
-            modifiers: [] 
-        }));
+      // ✅ Payload "Sakti": Kirim semua kemungkinan kunci (id, name, price)
+      const mappedItems = cartItems.map(item => ({
+          // Kunci untuk Database (V2)
+          product_id: item.id,
+          product_name: item.name,
+          unit_price: item.price,
+          subtotal: item.price * item.quantity,
+          
+          // Kunci untuk Controller Backend (Legacy/Lama)
+          id: item.id,            // 👈 Antisipasi error key "id"
+          name: item.name,        // 👈 Antisipasi error key "name"
+          price: item.price,      // 👈 Antisipasi error key "price"
+          
+          quantity: item.quantity,
+          variants: item.selectedVariant || null,
+          modifiers: [] 
+      }));
 
-        const payload = {
-            items: mappedItems,
-            type: sessionData.type,         
-            seat_id: sessionData.seat_id,   
-            payment_method: paymentMethod,  
-            guest_name: "", 
-            promo_code: appliedPromoCode || null,
-            discount_amount: discountAmount 
-        };
+      const payload = {
+          items: mappedItems,
+          type: sessionData.type,         
+          seat_id: sessionData.seat_id,   
+          payment_method: paymentMethod,  
+          guest_name: "", 
+          promo_code: appliedPromoCode || null,
+          discount_amount: discountAmount 
+      };
 
         const res = await fetch(`${BACKEND_URL}/api/checkout`, {
             method: "POST",
