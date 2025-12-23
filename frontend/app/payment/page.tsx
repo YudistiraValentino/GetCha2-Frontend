@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { QRCodeSVG } from 'qrcode.react';
 
-// ✅ Gunakan URL Produksi Railway
+// ✅ URL Produksi Railway
 const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
 
 export default function PaymentPage() {
@@ -89,31 +89,24 @@ export default function PaymentPage() {
 
   // 🔥 Helper Gambar (Sesuai dengan Dashboard & Admin)
   const getImageUrl = (path: string) => {
-  if (!path) return "/Image/placeholder.png";
-  if (path.startsWith("http")) return path;
+    if (!path) return "/Image/placeholder.png";
+    if (path.startsWith("http")) return path;
 
-  const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
-  
-  // 1. Bersihkan path dari string 'public/' jika terbawa dari database
-  let cleanPath = path.replace('public/', '');
+    // Bersihkan path
+    let cleanPath = path.replace('public/', '');
+    if (!cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
 
-  // 2. Pastikan diawali dengan satu garis miring
-  if (!cleanPath.startsWith('/')) {
-    cleanPath = '/' + cleanPath;
-  }
+    // Jika di database isinya "/images/xxx.png", jangan tambah /storage
+    if (
+      !cleanPath.startsWith('/storage') && 
+      !cleanPath.startsWith('/images') && 
+      !cleanPath.startsWith('/maps')
+    ) {
+      cleanPath = '/storage' + cleanPath;
+    }
 
-  // 3. JANGAN tambahkan /storage jika path sudah diawali /images atau /maps
-  // Karena data kamu di DB sekarang adalah /images/namafile.png
-  if (
-    !cleanPath.startsWith('/storage') && 
-    !cleanPath.startsWith('/images') && 
-    !cleanPath.startsWith('/maps')
-  ) {
-    cleanPath = '/storage' + cleanPath;
-  }
-
-  return `${BACKEND_URL}${cleanPath}`;
-};
+    return `${BACKEND_URL}${cleanPath}`;
+  };
 
   // --- FUNGSI CHECKOUT ---
   const handlePayment = async () => {
@@ -121,15 +114,16 @@ export default function PaymentPage() {
     try {
         const token = localStorage.getItem("token");
 
-        // ✅ MAP DATA ITEM AGAR SAMA DENGAN MEGA RESET V2 (unit_price, subtotal, product_id)
+        // ✅ FIX: Kirim 'price' DAN 'unit_price' agar Backend tidak error "Undefined array key"
         const mappedItems = cartItems.map(item => ({
             product_id: item.id,
             product_name: item.name,
             quantity: item.quantity,
-            unit_price: item.price,
+            unit_price: item.price, 
+            price: item.price,      // 👈 WAJIB ADA untuk validasi Backend Laravel
             subtotal: item.price * item.quantity,
             variants: item.selectedVariant || null,
-            modifiers: [] // Kirim array kosong jika tidak ada modifier
+            modifiers: [] 
         }));
 
         const payload = {
@@ -153,13 +147,17 @@ export default function PaymentPage() {
         });
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Gagal memproses pesanan.");
+        
+        // Cek jika response sukses atau gagal
+        if (!res.ok) {
+            throw new Error(data.message || "Gagal memproses pesanan.");
+        }
 
         clearCart(); 
         localStorage.removeItem("checkout_session"); 
         
         alert(`Pesanan Berhasil! Nomor Order: ${data.order_number}`);
-        router.push("/activity"); // 👈 Redirect ke activity untuk pantau status
+        router.push("/activity"); 
 
     } catch (error: any) {
         alert("Terjadi Kesalahan: " + error.message);
@@ -170,7 +168,7 @@ export default function PaymentPage() {
 
   if (!sessionData) return <div className="min-h-screen bg-navy-900 flex items-center justify-center"><Loader2 className="animate-spin text-gold-500" size={40} /></div>;
 
-  const qrisValue = `GETCHA-PAYMENT:${total}`; 
+  const qrisValue = `00020101021126570014ID.CO.QRIS.WWW01189360052300000000000215ID1020200000000030360443015802ID5907GETCHA26006MEDAN6304`; 
 
   return (
     <main className="min-h-screen bg-gray-50 pb-20">
@@ -210,7 +208,7 @@ export default function PaymentPage() {
                   <div key={item.internalId} className="flex justify-between items-start border-b border-gray-50 pb-4 last:border-0">
                     <div className="flex gap-4">
                       <div className="w-12 h-12 bg-gray-50 rounded-lg relative overflow-hidden shrink-0 border border-gray-100">
-                          <Image src={getImageUrl(item.image)} alt={item.name} fill className="object-contain p-1" unoptimized/>
+                          <img src={getImageUrl(item.image)} alt={item.name} className="w-full h-full object-contain p-1" />
                       </div>
                       <div>
                         <p className="font-bold text-navy-900 text-sm">{item.name}</p>
