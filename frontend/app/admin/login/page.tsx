@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from "next/navigation";
 import { Coffee, Lock, Mail, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 
-// Ganti baris 7 jadi begini:
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+// ✅ CONFIG: Pastikan URL Backend Benar
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -21,9 +21,9 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-        // PERBAIKAN: Gunakan variabel BACKEND_URL, jangan hardcode link Railway!
-        // Pastikan tidak ada slash ganda (//)
-        const res = await fetch(`${BACKEND_URL}/api/admin/login`, {
+        // 🔥 PERBAIKAN PENTING: URL disesuaikan dengan web.php (/login)
+        // Kita pakai /login karena route di web.php ada di root, bukan di /api/admin
+        const res = await fetch(`${BACKEND_URL}/login`, {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json", 
@@ -41,9 +41,12 @@ export default function AdminLoginPage() {
         const json = await res.json();
 
         if (json.success) {
+            // ✅ SIMPAN TOKEN DARI 'json.data.token'
             localStorage.setItem("token", json.data.token);
             localStorage.setItem("user", JSON.stringify(json.data.user));
-            router.push("/admin"); 
+            
+            // Redirect
+            router.push("/admin/products"); // Langsung ke products aja biar keliatan
         } else {
             setError(json.message || "Login gagal.");
         }
@@ -58,7 +61,7 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen bg-navy-900 flex items-center justify-center p-4">
-      {/* Background Ornament (Optional) */}
+      {/* Background Ornament */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
          <div className="absolute -top-24 -left-24 w-96 h-96 bg-gold-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob"></div>
          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000"></div>
@@ -75,8 +78,6 @@ export default function AdminLoginPage() {
                 <h1 className="text-2xl font-serif font-bold text-white tracking-wide">GetCha Admin</h1>
                 <p className="text-navy-300 text-xs uppercase tracking-widest mt-1">Portal Management System</p>
             </div>
-            
-            {/* Pattern Overlay */}
             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
         </div>
 
