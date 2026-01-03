@@ -72,7 +72,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-900 to-navy-950 px-4 py-10 relative overflow-hidden">
       
-      {/* --- BACKGROUND DECORATION (Sama dengan Login) --- */}
+      {/* --- BACKGROUND DECORATION --- */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-gold-500 rounded-full blur-[150px] opacity-20 -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-600 rounded-full blur-[150px] opacity-20 translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
 
@@ -115,7 +115,8 @@ export default function SignupPage() {
                         <User size={20} />
                     </div>
                     <input 
-                        required name="name" type="text" onChange={handleChange} placeholder="e.g. John Doe" 
+                        required name="name" type="text" onChange={handleChange} 
+                        placeholder="Enter your full name" 
                         className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-navy-900 rounded-xl focus:outline-none focus:border-gold-500 focus:ring-4 focus:ring-gold-500/10 transition-all font-medium placeholder:text-gray-400"
                     />
                 </div>
@@ -129,7 +130,8 @@ export default function SignupPage() {
                         <Mail size={20} />
                     </div>
                     <input 
-                        required name="email" type="email" onChange={handleChange} placeholder="name@example.com" 
+                        required name="email" type="email" onChange={handleChange} 
+                        placeholder="Enter your email address" 
                         className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-navy-900 rounded-xl focus:outline-none focus:border-gold-500 focus:ring-4 focus:ring-gold-500/10 transition-all font-medium placeholder:text-gray-400"
                     />
                 </div>
@@ -143,7 +145,8 @@ export default function SignupPage() {
                         <AtSign size={20} />
                     </div>
                     <input 
-                        required name="username" type="text" onChange={handleChange} placeholder="Choose a username" 
+                        required name="username" type="text" onChange={handleChange} 
+                        placeholder="Create a username" 
                         className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-navy-900 rounded-xl focus:outline-none focus:border-gold-500 focus:ring-4 focus:ring-gold-500/10 transition-all font-medium placeholder:text-gray-400"
                     />
                 </div>
@@ -158,7 +161,8 @@ export default function SignupPage() {
                             <Lock size={20} />
                         </div>
                         <input 
-                            required name="password" type="password" onChange={handleChange} placeholder="••••••••" 
+                            required name="password" type="password" onChange={handleChange} 
+                            placeholder="Enter password" 
                             className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-navy-900 rounded-xl focus:outline-none focus:border-gold-500 focus:ring-4 focus:ring-gold-500/10 transition-all font-medium placeholder:text-gray-400"
                         />
                     </div>
@@ -171,7 +175,8 @@ export default function SignupPage() {
                             <CheckCircle2 size={20} />
                         </div>
                         <input 
-                            required name="password_confirmation" type="password" onChange={handleChange} placeholder="••••••••" 
+                            required name="password_confirmation" type="password" onChange={handleChange} 
+                            placeholder="Repeat password" 
                             className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-navy-900 rounded-xl focus:outline-none focus:border-gold-500 focus:ring-4 focus:ring-gold-500/10 transition-all font-medium placeholder:text-gray-400"
                         />
                     </div>
