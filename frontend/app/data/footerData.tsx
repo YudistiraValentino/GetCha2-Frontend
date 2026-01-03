@@ -38,7 +38,7 @@ export const footerData = {
   // 3. BAGIAN KONTAK
   contact: {
     title: "Visit Us",
-    address: "Jl. Yudistira No. 45, Jomokerto, RepublikSuki 12190",
+    address: "Jl. A.Yani No. 45, Sumatera Utara, Indonesia 12190",
     phone: "+62 812-3456-7890",
     email: "hello@getcha.com"
   },
