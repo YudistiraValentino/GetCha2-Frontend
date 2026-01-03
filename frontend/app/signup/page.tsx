@@ -3,18 +3,27 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2, AlertCircle } from "lucide-react";
+import { 
+  ArrowLeft, 
+  User, 
+  Mail, 
+  Lock, 
+  Loader2, 
+  AlertCircle, 
+  CheckCircle2,
+  AtSign
+} from "lucide-react"; 
 
 export default function SignupPage() {
   const router = useRouter();
 
   // 1. State Data
   const [formData, setFormData] = useState({
-    name: "", // Biasanya backend butuh nama lengkap
+    name: "",
     username: "",
     email: "",
     password: "",
-    password_confirmation: "" // Best practice: konfirmasi password
+    password_confirmation: ""
   });
   
   const [loading, setLoading] = useState(false);
@@ -37,7 +46,6 @@ export default function SignupPage() {
     }
 
     try {
-        // 2. Panggil API Register Laravel
         const res = await fetch("https://getcha2-backend-production.up.railway.app/api/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -48,7 +56,7 @@ export default function SignupPage() {
 
         if (!res.ok) throw new Error(data.message || "Registration failed");
 
-        // 3. Auto Login setelah register (Simpan Token)
+        // Auto Login (Simpan Token)
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
 
@@ -62,85 +70,140 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 relative py-10">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-900 to-navy-950 px-4 py-10 relative overflow-hidden">
       
-      {/* Tombol Kembali (sama seperti kodemu) */}
-      <div className="absolute top-6 left-6 md:top-8 md:left-12 z-20">
-        <Link href="/" className="flex items-center gap-2 text-gray-500 hover:text-navy-900 transition-colors font-medium group">
-          <div className="p-2 bg-white rounded-full shadow-sm group-hover:shadow-md transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-            </svg>
+      {/* --- BACKGROUND DECORATION (Sama dengan Login) --- */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-gold-500 rounded-full blur-[150px] opacity-20 -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-600 rounded-full blur-[150px] opacity-20 translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
+
+      {/* --- TOMBOL KEMBALI --- */}
+      <div className="absolute top-8 left-6 md:left-12 z-20">
+        <Link href="/" className="group flex items-center gap-3 text-gray-400 hover:text-white transition-all duration-300">
+          <div className="p-2 bg-white/10 backdrop-blur-md rounded-full group-hover:bg-gold-500 group-hover:text-navy-900 transition-colors border border-white/10">
+            <ArrowLeft size={20} />
           </div>
-          <span className="text-sm font-bold">Back to Landing</span>
+          <span className="text-sm font-bold tracking-wide opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-300">Back to Home</span>
         </Link>
       </div>
 
-      <div className="max-w-md w-full rounded-2xl shadow-2xl overflow-hidden z-10 border border-gray-100 mt-12 md:mt-0">
+      {/* --- KARTU REGISTER --- */}
+      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl relative z-10 p-8 md:p-10 animate-in fade-in zoom-in duration-500 my-10">
         
-        {/* Header Putih */}
-        <div className="bg-white p-8 pb-6 text-center flex flex-col items-center">
-          <Link href="/" className="cursor-pointer mb-4">
-            <div className="w-[180px] h-[60px] relative shrink-0">
-              <Image src="/Image/Logo.png" alt="GetCha Logo" fill className="object-contain" priority sizes="200px"/>
+        {/* Header */}
+        <div className="text-center mb-8">
+            <div className="w-[160px] h-12 relative mx-auto mb-4">
+               <Image src="/Image/Logo.png" alt="GetCha Logo" fill className="object-contain" priority/>
             </div>
-          </Link>
-          <h2 className="text-3xl font-serif font-bold text-navy-900 tracking-wider">Create Account</h2>
-          <p className="text-gray-500 mt-2 text-sm">Join us and skip the waiting line</p>
+            <h2 className="text-2xl md:text-3xl font-serif font-bold text-navy-900">Create Account</h2>
+            <p className="text-gray-400 text-sm mt-2">Join us and enjoy coffee without the queue.</p>
         </div>
 
-        {/* Form Navy */}
-        <div className="p-8 pt-8 bg-navy-900">
-          
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 text-red-200 rounded-lg text-sm flex items-center gap-2">
-                <AlertCircle size={16} /> {error}
+        {/* Error Alert */}
+        {error && (
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm flex items-center gap-2 animate-in slide-in-from-top-2">
+                <AlertCircle size={16} className="shrink-0" /> {error}
             </div>
-          )}
+        )}
 
-          <form className="space-y-4" onSubmit={handleSignup}>
-            {/* Full Name */}
-            <div>
-              <label className="block text-white font-bold mb-1 text-sm">Full Name</label>
-              <input required name="name" type="text" onChange={handleChange} placeholder="Username" className="w-full px-4 py-3 rounded-lg border-none focus:ring-2 focus:ring-gold-500 bg-white text-navy-900"/>
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-white font-bold mb-1 text-sm">Email</label>
-              <input required name="email" type="email" onChange={handleChange} placeholder="E-mail" className="w-full px-4 py-3 rounded-lg border-none focus:ring-2 focus:ring-gold-500 bg-white text-navy-900"/>
-            </div>
-
-            {/* Username */}
-            <div>
-              <label className="block text-white font-bold mb-1 text-sm">Username</label>
-              <input required name="username" type="text" onChange={handleChange} placeholder="Choose a username" className="w-full px-4 py-3 rounded-lg border-none focus:ring-2 focus:ring-gold-500 bg-white text-navy-900"/>
+        <form className="space-y-4" onSubmit={handleSignup}>
+            
+            {/* 1. Full Name */}
+            <div className="space-y-1.5">
+                <label className="text-xs font-bold text-navy-900 uppercase tracking-wider ml-1">Full Name</label>
+                <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-gold-500 transition-colors">
+                        <User size={20} />
+                    </div>
+                    <input 
+                        required name="name" type="text" onChange={handleChange} placeholder="e.g. John Doe" 
+                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-navy-900 rounded-xl focus:outline-none focus:border-gold-500 focus:ring-4 focus:ring-gold-500/10 transition-all font-medium placeholder:text-gray-400"
+                    />
+                </div>
             </div>
 
-            {/* Password */}
-            <div>
-              <label className="block text-white font-bold mb-1 text-sm">Password</label>
-              <input required name="password" type="password" onChange={handleChange} placeholder="••••••••" className="w-full px-4 py-3 rounded-lg border-none focus:ring-2 focus:ring-gold-500 bg-white text-navy-900"/>
+            {/* 2. Email */}
+            <div className="space-y-1.5">
+                <label className="text-xs font-bold text-navy-900 uppercase tracking-wider ml-1">Email Address</label>
+                <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-gold-500 transition-colors">
+                        <Mail size={20} />
+                    </div>
+                    <input 
+                        required name="email" type="email" onChange={handleChange} placeholder="name@example.com" 
+                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-navy-900 rounded-xl focus:outline-none focus:border-gold-500 focus:ring-4 focus:ring-gold-500/10 transition-all font-medium placeholder:text-gray-400"
+                    />
+                </div>
             </div>
 
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-white font-bold mb-1 text-sm">Confirm Password</label>
-              <input required name="password_confirmation" type="password" onChange={handleChange} placeholder="••••••••" className="w-full px-4 py-3 rounded-lg border-none focus:ring-2 focus:ring-gold-500 bg-white text-navy-900"/>
+            {/* 3. Username */}
+            <div className="space-y-1.5">
+                <label className="text-xs font-bold text-navy-900 uppercase tracking-wider ml-1">Username</label>
+                <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-gold-500 transition-colors">
+                        <AtSign size={20} />
+                    </div>
+                    <input 
+                        required name="username" type="text" onChange={handleChange} placeholder="Choose a username" 
+                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-navy-900 rounded-xl focus:outline-none focus:border-gold-500 focus:ring-4 focus:ring-gold-500/10 transition-all font-medium placeholder:text-gray-400"
+                    />
+                </div>
             </div>
 
+            {/* 4. Password */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-navy-900 uppercase tracking-wider ml-1">Password</label>
+                    <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-gold-500 transition-colors">
+                            <Lock size={20} />
+                        </div>
+                        <input 
+                            required name="password" type="password" onChange={handleChange} placeholder="••••••••" 
+                            className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-navy-900 rounded-xl focus:outline-none focus:border-gold-500 focus:ring-4 focus:ring-gold-500/10 transition-all font-medium placeholder:text-gray-400"
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-navy-900 uppercase tracking-wider ml-1">Confirm</label>
+                    <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-gold-500 transition-colors">
+                            <CheckCircle2 size={20} />
+                        </div>
+                        <input 
+                            required name="password_confirmation" type="password" onChange={handleChange} placeholder="••••••••" 
+                            className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-navy-900 rounded-xl focus:outline-none focus:border-gold-500 focus:ring-4 focus:ring-gold-500/10 transition-all font-medium placeholder:text-gray-400"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Submit Button */}
             <button 
                 type="submit" 
                 disabled={loading}
-                className="w-full bg-gold-500 text-navy-900 font-bold py-3 rounded-lg hover:bg-gold-400 transition shadow-lg cursor-pointer transform active:scale-95 duration-200 mt-4 flex justify-center items-center disabled:opacity-70"
+                className="w-full bg-navy-900 text-white font-bold py-4 rounded-xl hover:bg-gold-500 hover:text-navy-900 transition-all duration-300 shadow-lg shadow-navy-900/20 active:scale-[0.98] mt-6 flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {loading ? <Loader2 className="animate-spin" /> : "SIGN UP"}
+                {loading ? (
+                    <Loader2 className="animate-spin" size={20} /> 
+                ) : (
+                    <>
+                        CREATE ACCOUNT
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-4 h-4 group-hover:translate-x-1 transition-transform">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                        </svg>
+                    </>
+                )}
             </button>
-          </form>
+        </form>
 
-          <div className="mt-8 text-center text-sm text-gray-300">
-            Already have an account? <Link href="/login" className="text-gold-400 font-bold hover:underline hover:text-white transition-colors">Login</Link>
-          </div>
+        <div className="mt-8 text-center">
+            <p className="text-gray-400 text-sm">
+                Already have an account?{' '}
+                <Link href="/login" className="text-navy-900 font-bold hover:text-gold-500 transition-colors underline decoration-2 underline-offset-4 decoration-gold-200 hover:decoration-gold-500">
+                    Login here
+                </Link>
+            </p>
         </div>
 
       </div>
