@@ -5,7 +5,7 @@ import NavbarDashboard from "@/app/components/layout/NavbarDashboard";
 import { Upload, Save, AlertCircle, CheckCircle, Info, FileUp, Loader2 } from 'lucide-react';
 import { useRouter } from "next/navigation";
 
-// ✅ CONFIG
+// ✅ CONFIG: Pastikan URL Backend Benar
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
 
 export default function AdminMapManager() {
@@ -13,7 +13,7 @@ export default function AdminMapManager() {
   
   // State Data
   const [svgContent, setSvgContent] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null); // 👈 Simpan File Asli
+  const [selectedFile, setSelectedFile] = useState<File | null>(null); // Menyimpan file asli untuk diupload
   const [detectedSeats, setDetectedSeats] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
@@ -23,52 +23,59 @@ export default function AdminMapManager() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- CEK TOKEN ---
+  // --- 1. CEK TOKEN SAAT HALAMAN DIBUKA ---
   useEffect(() => {
+    // Cek apakah ada token di localStorage
     const token = localStorage.getItem('token');
-    if (!token) router.push('/admin/login');
+    
+    if (!token) {
+        // Kalau gak ada, langsung tendang ke login
+        alert("Sesi habis atau belum login. Silakan login ulang.");
+        router.push('/admin/login');
+    }
   }, [router]);
 
-  // --- LOGIC PEMROSESAN FILE UTAMA ---
+  // --- LOGIC PEMROSESAN FILE SVG ---
   const processFile = (file: File) => {
     setErrorMsg(null);
     setDetectedSeats([]);
-    setSelectedFile(null); // Reset dulu
+    setSelectedFile(null); 
 
-    // Validasi tipe file
+    // Validasi tipe file harus SVG
     if (file && file.type === "image/svg+xml") {
       const reader = new FileReader();
       
       reader.onload = (e) => {
         const content = e.target?.result as string;
         
-        // 1. Parsing SVG Text menjadi DOM Element
+        // Parsing SVG Text menjadi DOM Element untuk dicek isinya
         const parser = new DOMParser();
         const doc = parser.parseFromString(content, "image/svg+xml");
         
-        // 2. DETEKSI KURSI (Format: "Seat-")
+        // Cari elemen dengan ID "Seat-"
         const seats = doc.querySelectorAll('[id^="Seat-"]');
 
         if (seats.length === 0) {
-          setErrorMsg("Warning: No seats detected! Please make sure layers in SVG are named 'Seat-XX'.");
+          setErrorMsg("Warning: Tidak ada kursi terdeteksi! Pastikan ID layer di SVG diawali dengan 'Seat-XX'.");
         } else {
           const seatIds = Array.from(seats).map(seat => seat.id);
           setDetectedSeats(seatIds);
-          // Hanya set file jika validasi kursi berhasil (atau set warning aja)
-          setSelectedFile(file); // 👈 SIMPAN FILE DISINI
+          
+          // Simpan file asli ke state untuk nanti diupload
+          setSelectedFile(file);
         }
 
-        // 3. Simpan konten SVG untuk preview
+        // Simpan konten string untuk preview di layar
         setSvgContent(content);
       };
       
       reader.readAsText(file);
     } else {
-      setErrorMsg("Invalid file type. Please upload a .svg file.");
+      setErrorMsg("Format salah. Harap upload file .svg");
     }
   };
 
-  // --- HANDLERS ---
+  // --- HANDLERS DRAG & DROP ---
   const handleFileInput = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) processFile(file);
@@ -91,26 +98,42 @@ export default function AdminMapManager() {
     if (file) processFile(file);
   };
 
-  // --- 🔥 SAVE KE BACKEND (API) ---
+  // --- 🔥 LOGIC UPLOAD KE BACKEND (FIXED) ---
   const handleSave = async () => {
-    if (!selectedFile) return;
+    // 1. Validasi File
+    if (!selectedFile) {
+        alert("Belum ada file map yang dipilih!");
+        return;
+    }
     
     setLoading(true);
-    const token = localStorage.getItem('token');
 
-    // Siapkan FormData untuk Upload File
+    // 2. Ambil Token Terbaru
+    const token = localStorage.getItem('token');
+    
+    // Debugging di Console (Tekan F12 kalau mau lihat)
+    console.log("Mengirim dengan Token:", token);
+
+    if (!token) {
+        alert("Error: Token tidak ditemukan. Harap login ulang.");
+        router.push('/admin/login');
+        setLoading(false);
+        return;
+    }
+
+    // 3. Siapkan FormData
     const formData = new FormData();
-    formData.append("name", "Main Layout " + new Date().toLocaleDateString()); // Nama otomatis
-    formData.append("image", selectedFile); // 👈 Kirim File Asli
+    formData.append("name", "Store Layout " + new Date().toLocaleDateString()); // Nama otomatis
+    formData.append("image", selectedFile); // Kirim file fisik
     formData.append("is_active", "1"); // Langsung aktifkan
 
     try {
         const res = await fetch(`${BACKEND_URL}/api/admin/maps`, {
             method: "POST",
             headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}` // 👈 Token Wajib Ada
-                // Content-Type jangan di-set manual saat upload file!
+                'Accept': 'application/json',        // PENTING: Minta balikan JSON
+                'Authorization': `Bearer ${token}`   // PENTING: Kartu akses admin
+                // Jangan set Content-Type manual untuk FormData!
             },
             body: formData
         });
@@ -118,21 +141,23 @@ export default function AdminMapManager() {
         const data = await res.json();
 
         if (res.ok) {
-            alert(`Success! Layout uploaded and activated.`);
-            // Opsional: Refresh atau Redirect
-            window.location.reload();
+            alert(`✅ BERHASIL! Map baru sudah aktif.`);
+            window.location.reload(); // Refresh halaman
         } else {
-            console.error(data);
+            console.error("Server Error:", data);
+            
+            // Handle Token Basi (401)
             if (res.status === 401) {
-                alert("Session Expired. Please login again.");
+                alert("❌ Sesi Login Habis (401). Silakan Login Ulang.");
+                localStorage.removeItem('token'); // Hapus token basi
                 router.push('/admin/login');
             } else {
-                alert("Upload Failed: " + (data.message || "Unknown Error"));
+                alert("❌ Gagal Upload: " + (data.message || "Terjadi kesalahan di server."));
             }
         }
     } catch (error) {
-        console.error(error);
-        alert("Network Error. Check console.");
+        console.error("Network Error:", error);
+        alert("❌ Gagal terhubung ke server. Cek koneksi internet.");
     } finally {
         setLoading(false);
     }
