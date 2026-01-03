@@ -13,7 +13,7 @@ export default function AdminMapManager() {
   
   // State Data
   const [svgContent, setSvgContent] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null); // Menyimpan file asli untuk diupload
+  const [selectedFile, setSelectedFile] = useState<File | null>(null); // State menyimpan file asli
   const [detectedSeats, setDetectedSeats] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
@@ -25,12 +25,9 @@ export default function AdminMapManager() {
 
   // --- 1. CEK TOKEN SAAT HALAMAN DIBUKA ---
   useEffect(() => {
-    // Cek apakah ada token di localStorage
     const token = localStorage.getItem('token');
-    
     if (!token) {
-        // Kalau gak ada, langsung tendang ke login
-        alert("Sesi habis atau belum login. Silakan login ulang.");
+        // Kalau gak ada token, tendang ke login
         router.push('/admin/login');
     }
   }, [router]);
@@ -39,7 +36,7 @@ export default function AdminMapManager() {
   const processFile = (file: File) => {
     setErrorMsg(null);
     setDetectedSeats([]);
-    setSelectedFile(null); 
+    setSelectedFile(null); // Reset file lama
 
     // Validasi tipe file harus SVG
     if (file && file.type === "image/svg+xml") {
@@ -48,7 +45,7 @@ export default function AdminMapManager() {
       reader.onload = (e) => {
         const content = e.target?.result as string;
         
-        // Parsing SVG Text menjadi DOM Element untuk dicek isinya
+        // Parsing SVG Text menjadi DOM Element untuk validasi kursi
         const parser = new DOMParser();
         const doc = parser.parseFromString(content, "image/svg+xml");
         
@@ -61,7 +58,7 @@ export default function AdminMapManager() {
           const seatIds = Array.from(seats).map(seat => seat.id);
           setDetectedSeats(seatIds);
           
-          // Simpan file asli ke state untuk nanti diupload
+          // ✅ PENTING: Simpan file asli ke state untuk diupload nanti
           setSelectedFile(file);
         }
 
@@ -111,8 +108,8 @@ export default function AdminMapManager() {
     // 2. Ambil Token Terbaru
     const token = localStorage.getItem('token');
     
-    // Debugging di Console (Tekan F12 kalau mau lihat)
-    console.log("Mengirim dengan Token:", token);
+    // Debugging Token di Console
+    console.log("Mencoba upload dengan token:", token);
 
     if (!token) {
         alert("Error: Token tidak ditemukan. Harap login ulang.");
@@ -123,17 +120,18 @@ export default function AdminMapManager() {
 
     // 3. Siapkan FormData
     const formData = new FormData();
-    formData.append("name", "Store Layout " + new Date().toLocaleDateString()); // Nama otomatis
-    formData.append("image", selectedFile); // Kirim file fisik
+    formData.append("name", "Store Layout " + new Date().toLocaleDateString()); 
+    formData.append("image", selectedFile); // ✅ Kirim File Fisik
     formData.append("is_active", "1"); // Langsung aktifkan
 
     try {
         const res = await fetch(`${BACKEND_URL}/api/admin/maps`, {
             method: "POST",
             headers: {
-                'Accept': 'application/json',        // PENTING: Minta balikan JSON
-                'Authorization': `Bearer ${token}`   // PENTING: Kartu akses admin
-                // Jangan set Content-Type manual untuk FormData!
+                'Accept': 'application/json',        // Minta balikan JSON
+                'Authorization': `Bearer ${token}`   // ✅ WAJIB: Kartu akses admin
+                // ❌ JANGAN SET 'Content-Type': 'multipart/form-data' SECARA MANUAL!
+                // Biarkan browser yang mengaturnya otomatis saat ada FormData.
             },
             body: formData
         });
@@ -142,14 +140,14 @@ export default function AdminMapManager() {
 
         if (res.ok) {
             alert(`✅ BERHASIL! Map baru sudah aktif.`);
-            window.location.reload(); // Refresh halaman
+            window.location.reload(); // Refresh halaman biar bersih
         } else {
             console.error("Server Error:", data);
             
             // Handle Token Basi (401)
             if (res.status === 401) {
                 alert("❌ Sesi Login Habis (401). Silakan Login Ulang.");
-                localStorage.removeItem('token'); // Hapus token basi
+                localStorage.removeItem('token'); 
                 router.push('/admin/login');
             } else {
                 alert("❌ Gagal Upload: " + (data.message || "Terjadi kesalahan di server."));
