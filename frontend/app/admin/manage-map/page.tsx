@@ -1,22 +1,39 @@
 "use client";
-import React, { useState, useRef } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import NavbarDashboard from "@/app/components/layout/NavbarDashboard";
-import { Upload, Save, AlertCircle, CheckCircle, Info, FileUp } from 'lucide-react';
+import { Upload, Save, AlertCircle, CheckCircle, Info, FileUp, Loader2 } from 'lucide-react';
+import { useRouter } from "next/navigation";
+
+// ✅ CONFIG
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
 
 export default function AdminMapManager() {
+  const router = useRouter();
+  
+  // State Data
   const [svgContent, setSvgContent] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null); // 👈 Simpan File Asli
   const [detectedSeats, setDetectedSeats] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
-  // State untuk efek visual Drag & Drop
+  // State UI
   const [isDragging, setIsDragging] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // --- CEK TOKEN ---
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) router.push('/admin/login');
+  }, [router]);
 
   // --- LOGIC PEMROSESAN FILE UTAMA ---
   const processFile = (file: File) => {
     setErrorMsg(null);
     setDetectedSeats([]);
+    setSelectedFile(null); // Reset dulu
 
     // Validasi tipe file
     if (file && file.type === "image/svg+xml") {
@@ -29,19 +46,19 @@ export default function AdminMapManager() {
         const parser = new DOMParser();
         const doc = parser.parseFromString(content, "image/svg+xml");
         
-        // 2. DETEKSI KURSI (Sesuai Format SVG Kamu: "Seat-")
-        // Kita cari semua elemen yang ID-nya dimulai dengan "Seat-"
+        // 2. DETEKSI KURSI (Format: "Seat-")
         const seats = doc.querySelectorAll('[id^="Seat-"]');
 
         if (seats.length === 0) {
           setErrorMsg("Warning: No seats detected! Please make sure layers in SVG are named 'Seat-XX'.");
         } else {
-          // Ambil daftar ID untuk ditampilkan di panel kanan
           const seatIds = Array.from(seats).map(seat => seat.id);
           setDetectedSeats(seatIds);
+          // Hanya set file jika validasi kursi berhasil (atau set warning aja)
+          setSelectedFile(file); // 👈 SIMPAN FILE DISINI
         }
 
-        // 3. Simpan konten SVG untuk ditampilkan
+        // 3. Simpan konten SVG untuk preview
         setSvgContent(content);
       };
       
@@ -52,26 +69,21 @@ export default function AdminMapManager() {
   };
 
   // --- HANDLERS ---
-
-  // 1. Handle Klik Tombol Manual
   const handleFileInput = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) processFile(file);
   };
 
-  // 2. Handle Drag Over (Saat file melayang di atas area)
   const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  // 3. Handle Drag Leave (Saat file keluar area tanpa didrop)
   const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
   };
 
-  // 4. Handle Drop (Saat file dilepas)
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
@@ -79,11 +91,50 @@ export default function AdminMapManager() {
     if (file) processFile(file);
   };
 
-  // 5. Simpan ke System (LocalStorage)
-  const handleSave = () => {
-    if (svgContent && detectedSeats.length > 0) {
-      localStorage.setItem('branchMapSVG', svgContent);
-      alert(`Success! Layout saved with ${detectedSeats.length} active seats.`);
+  // --- 🔥 SAVE KE BACKEND (API) ---
+  const handleSave = async () => {
+    if (!selectedFile) return;
+    
+    setLoading(true);
+    const token = localStorage.getItem('token');
+
+    // Siapkan FormData untuk Upload File
+    const formData = new FormData();
+    formData.append("name", "Main Layout " + new Date().toLocaleDateString()); // Nama otomatis
+    formData.append("image", selectedFile); // 👈 Kirim File Asli
+    formData.append("is_active", "1"); // Langsung aktifkan
+
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/maps`, {
+            method: "POST",
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}` // 👈 Token Wajib Ada
+                // Content-Type jangan di-set manual saat upload file!
+            },
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            alert(`Success! Layout uploaded and activated.`);
+            // Opsional: Refresh atau Redirect
+            window.location.reload();
+        } else {
+            console.error(data);
+            if (res.status === 401) {
+                alert("Session Expired. Please login again.");
+                router.push('/admin/login');
+            } else {
+                alert("Upload Failed: " + (data.message || "Unknown Error"));
+            }
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Network Error. Check console.");
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -141,15 +192,15 @@ export default function AdminMapManager() {
             {/* Konten Preview */}
             <div className="flex-1 flex items-center justify-center p-8 relative">
             {/* Overlay saat Dragging */}
-{isDragging && (
-  <div
-    className="absolute inset-0 z-50 flex flex-col items-center justify-center 
-    bg-blue-50/90 backdrop-blur-sm pointer-events-none transition-opacity duration-150"
-  >
-    <FileUp size={64} className="text-blue-500 mb-4 animate-bounce" />
-    <h3 className="text-2xl font-bold text-blue-600">Drop SVG File Here</h3>
-  </div>
-)}
+            {isDragging && (
+              <div
+                className="absolute inset-0 z-50 flex flex-col items-center justify-center 
+                bg-blue-50/90 backdrop-blur-sm pointer-events-none transition-opacity duration-150"
+              >
+                <FileUp size={64} className="text-blue-500 mb-4 animate-bounce" />
+                <h3 className="text-2xl font-bold text-blue-600">Drop SVG File Here</h3>
+              </div>
+            )}
 
               {svgContent ? (
                 // Tampilkan Peta
@@ -206,10 +257,14 @@ export default function AdminMapManager() {
             {/* Tombol Publish */}
             <button 
               onClick={handleSave}
-              disabled={detectedSeats.length === 0}
-              className="w-full py-4 bg-navy-900 text-white font-bold rounded-xl hover:bg-gold-500 hover:text-navy-900 transition-all shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed flex justify-center gap-2"
+              disabled={detectedSeats.length === 0 || loading}
+              className="w-full py-4 bg-navy-900 text-white font-bold rounded-xl hover:bg-gold-500 hover:text-navy-900 transition-all shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed flex justify-center gap-2 items-center"
             >
-              <Save size={20} /> Publish Layout
+              {loading ? (
+                  <><Loader2 className="animate-spin" /> Uploading...</>
+              ) : (
+                  <><Save size={20} /> Publish Layout</>
+              )}
             </button>
             
             <p className="text-xs text-center text-gray-400 mt-4">
