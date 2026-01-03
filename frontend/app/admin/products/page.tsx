@@ -37,9 +37,17 @@ export default function AdminProductsPage() {
     // 1. FETCH DATA
     const fetchProducts = async () => {
         try {
-            const res = await fetch(`${BACKEND_URL}/api/menu`); // Gunakan endpoint menu public atau admin
+            const res = await fetch(`${BACKEND_URL}/api/menu`); 
             const json = await res.json();
-            if (json.success) setProducts(json.data);
+            
+            if (json.success) {
+                // FIX DISINI: Map data agar category_name terbaca
+                const cleanData = json.data.map((item: any) => ({
+                    ...item,
+                    category_name: item.category ? item.category.name : (item.category_name || "Uncategorized")
+                }));
+                setProducts(cleanData);
+            }
         } catch (error) {
             console.error("Gagal ambil produk:", error);
         } finally {

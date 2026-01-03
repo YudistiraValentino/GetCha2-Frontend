@@ -16,6 +16,11 @@ interface ProductAPI {
   price: string;
   image: string;
   is_promo: number;
+  // Add category object interface if needed for type safety, but 'any' in map covers it for now
+  category?: {
+      id: number;
+      name: string;
+  };
 }
 
 export default function MenuPage() {
@@ -41,7 +46,17 @@ export default function MenuPage() {
       try {
         const res = await fetch(`${BACKEND_URL}/api/menu`);
         const json = await res.json();
-        if (json.success) setProducts(json.data);
+        
+        if (json.success) {
+            // ✅ FIX: Map data agar category_name terbaca dengan benar
+            // Backend mungkin kirim 'category' object atau 'category_name' string
+            const mappedProducts = json.data.map((product: any) => ({
+                ...product,
+                category_name: product.category ? product.category.name : (product.category_name || "Uncategorized")
+            }));
+            
+            setProducts(mappedProducts);
+        }
       } catch (error) {
         console.error("Gagal mengambil menu:", error);
       } finally {
