@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Loader2, Plus, Trash, X, CheckSquare, Square } from "lucide-react";
 import Link from "next/link";
@@ -10,14 +10,14 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-
 
 // Interface untuk Tipe Data
 interface Option {
-  id: string; // ID sementara untuk key React
+  id: string;
   label: string;
   price: string;
   isDefault: boolean;
 }
 
 interface Modifier {
-  id: string; // ID sementara
+  id: string;
   name: string;
   required: boolean;
   options: Option[];
@@ -41,6 +41,15 @@ export default function CreateProductPage() {
   // State Modifiers (Groups: Sugar, Ice, etc)
   const [modifiers, setModifiers] = useState<Modifier[]>([]);
 
+  // --- CEK TOKEN SAAT LOAD ---
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        // Kalau gak ada token, tendang ke login admin
+        router.push('/admin/login'); 
+    }
+  }, [router]);
+
   // --- LOGIC VARIANTS ---
   const handleAddVariant = () => setVariants([...variants, { name: "", price: "" }]);
   const handleRemoveVariant = (index: number) => setVariants(variants.filter((_, i) => i !== index));
@@ -51,7 +60,7 @@ export default function CreateProductPage() {
     setVariants(newVariants);
   };
 
-  // --- LOGIC MODIFIERS (The Missing Part) ---
+  // --- LOGIC MODIFIERS ---
   const addModifierGroup = () => {
     const newGroup: Modifier = {
       id: Date.now().toString(),
@@ -100,10 +109,20 @@ export default function CreateProductPage() {
     setModifiers(newMods);
   };
 
-  // --- SUBMIT ---
+  // --- SUBMIT (INI BAGIAN YG DIPERBAIKI) ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // 1. Ambil Token
+    const token = localStorage.getItem('token'); // Pastikan key-nya 'token' atau 'admin_token' (sesuai login mu)
+    
+    if (!token) {
+        alert("Sesi Anda habis. Silakan login ulang.");
+        router.push("/admin/login");
+        setLoading(false);
+        return;
+    }
 
     const formData = new FormData();
     formData.append("name", name);
@@ -113,13 +132,10 @@ export default function CreateProductPage() {
     if (image) formData.append("image", image);
     formData.append("is_promo", isPromo ? "1" : "0");
 
-    // 1. Serialize Variants
-    // Filter varian kosong biar gak error
+    // Serialize Variants & Modifiers
     const validVariants = variants.filter(v => v.name.trim() !== "");
     formData.append("variants", JSON.stringify(validVariants));
 
-    // 2. Serialize Modifiers
-    // Bersihkan data sebelum kirim (hapus ID sementara)
     const validModifiers = modifiers.map(mod => ({
         name: mod.name,
         required: mod.required,
@@ -135,7 +151,12 @@ export default function CreateProductPage() {
     try {
         const res = await fetch(`${BACKEND_URL}/api/admin/products`, {
             method: "POST",
-            body: formData, // Browser otomatis set Content-Type multipart/form-data
+            headers: {
+                // 'Content-Type': 'multipart/form-data', ❌ JANGAN MANUAL SET INI UTK UPLOAD FILE
+                'Accept': 'application/json', // ✅ WAJIB: Biar Laravel tau kita minta JSON
+                'Authorization': `Bearer ${token}` // ✅ WAJIB: Biar gak diredirect ke login
+            },
+            body: formData, 
         });
 
         const data = await res.json();
@@ -145,7 +166,14 @@ export default function CreateProductPage() {
             router.push("/admin/products");
         } else {
             console.error(data);
-            alert("Gagal: " + (data.message || JSON.stringify(data)));
+            // Kalau token expired (401), tendang keluar
+            if (res.status === 401) {
+                alert("Sesi habis. Login lagi ya.");
+                localStorage.removeItem('token');
+                router.push('/admin/login');
+            } else {
+                alert("Gagal: " + (data.message || JSON.stringify(data)));
+            }
         }
     } catch (error) {
         console.error(error);
@@ -228,7 +256,7 @@ export default function CreateProductPage() {
                 </div>
             </div>
 
-            {/* 3. MODIFIERS (CUSTOMIZATION) - INI YANG BARU */}
+            {/* 3. MODIFIERS (CUSTOMIZATION) */}
             <div className="bg-purple-50 p-8 rounded-3xl border border-purple-100 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
                     <div>
