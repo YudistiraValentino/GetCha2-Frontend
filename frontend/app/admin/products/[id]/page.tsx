@@ -1,16 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter, useParams } from "next/navigation"; // 👈 useParams untuk ambil [id]
+import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Save, Loader2, Plus, Trash } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 
-// Ganti baris 7 jadi begini:
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+// ✅ CONFIG: Pakai Env Var biar aman
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
+
 export default function EditProductPage() {
   const router = useRouter();
-  const params = useParams(); // Ambil ID dari URL
+  const params = useParams();
   const productId = params.id;
 
   const [loading, setLoading] = useState(true);
@@ -22,15 +22,28 @@ export default function EditProductPage() {
   const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState<File | null>(null);
-  const [previewImage, setPreviewImage] = useState(""); // Untuk preview gambar lama
+  const [previewImage, setPreviewImage] = useState("");
   const [isPromo, setIsPromo] = useState(false);
   const [variants, setVariants] = useState<any[]>([]);
 
   // 1. FETCH DATA PRODUCT SAAT LOAD
   useEffect(() => {
     const fetchProduct = async () => {
+        // 🔥 CEK TOKEN DULU
+        const token = localStorage.getItem('token');
+        if (!token) {
+            router.push('/admin/login');
+            return;
+        }
+
         try {
-            const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/products/${productId}`);
+            // Gunakan BACKEND_URL constant dan Header Auth
+            const res = await fetch(`${BACKEND_URL}/api/admin/products/${productId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}` // GET biasanya aman pakai Header
+                }
+            });
             const json = await res.json();
             
             if (json.success) {
@@ -40,17 +53,26 @@ export default function EditProductPage() {
                 setCategoryId(p.category_id);
                 setDescription(p.description || "");
                 setIsPromo(p.is_promo === 1);
-                setPreviewImage(`${BACKEND_URL}${p.image}`);
                 
-                // Set Variants (Pastikan format sesuai)
+                // Handle Image URL
+                if(p.image) {
+                    const imgUrl = p.image.startsWith('http') ? p.image : `${BACKEND_URL}${p.image}`;
+                    setPreviewImage(imgUrl);
+                }
+                
+                // Set Variants
                 if (p.variants && p.variants.length > 0) {
                     setVariants(p.variants.map((v: any) => ({ name: v.name, price: v.price })));
                 } else {
                     setVariants([{ name: "", price: "" }]);
                 }
             } else {
-                alert("Produk tidak ditemukan");
-                router.push("/admin/products");
+                if(res.status === 401) {
+                    router.push('/admin/login');
+                } else {
+                    alert("Produk tidak ditemukan");
+                    router.push("/admin/products");
+                }
             }
         } catch (error) {
             console.error("Error fetching product:", error);
@@ -71,28 +93,43 @@ export default function EditProductPage() {
     setVariants(newVariants);
   };
 
-  // 2. UPDATE HANDLER
+  // 2. UPDATE HANDLER (FIXED AUTH)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 🔥 AMBIL TOKEN
+    const token = localStorage.getItem('token');
+    if (!token) {
+        alert("Sesi habis. Login ulang.");
+        router.push('/admin/login');
+        return;
+    }
+
     setSubmitting(true);
 
     const formData = new FormData();
-    formData.append("_method", "PUT"); // 👈 TRIK WAJIB DI LARAVEL (Spoofing Method PUT via POST)
+    formData.append("_method", "PUT"); // SPOOFING PUT
     formData.append("name", name);
     formData.append("price", price);
     formData.append("category_id", categoryId);
     formData.append("description", description);
     formData.append("is_promo", isPromo ? "1" : "0");
     
-    // Hanya kirim gambar jika user upload baru
     if (image) formData.append("image", image);
 
     formData.append("variants", JSON.stringify(variants));
 
     try {
-        // Method tetap POST, tapi Laravel bacanya PUT karena ada _method
-        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/products/${productId}`, {
-            method: "POST", 
+        // 🔥 PAKAI URL QUERY PARAM (Nuclear Option)
+        // Biar upload gambar tidak kena blokir server
+        const url = `${BACKEND_URL}/api/admin/products/${productId}?token=${token}`;
+
+        const res = await fetch(url, {
+            method: "POST", // Tetap POST karena FormData
+            headers: {
+                'Accept': 'application/json',
+                // Header Auth kita hapus, andalkan URL token saja biar aman
+            },
             body: formData,
         });
 
@@ -102,7 +139,13 @@ export default function EditProductPage() {
             alert("Produk berhasil diupdate!");
             router.push("/admin/products");
         } else {
-            alert("Gagal: " + (data.message || "Error updating product"));
+            console.error("Update Error:", data);
+            if(res.status === 401) {
+                alert("Token Expired. Login ulang.");
+                router.push('/admin/login');
+            } else {
+                alert("Gagal: " + (data.message || "Error updating product"));
+            }
         }
     } catch (error) {
         console.error(error);
@@ -112,10 +155,10 @@ export default function EditProductPage() {
     }
   };
 
-  if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin" /></div>;
+  if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-navy-900" size={40} /></div>;
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto pb-20 pt-10 px-4">
         <div className="flex items-center gap-4 mb-6">
             <Link href="/admin/products" className="p-2 bg-white rounded-full shadow-sm hover:bg-gray-100 transition"><ArrowLeft size={20} className="text-navy-900"/></Link>
             <h1 className="text-2xl font-bold text-navy-900">Edit Product</h1>
@@ -171,8 +214,8 @@ export default function EditProductPage() {
                 <div className="space-y-3">
                     {variants.map((v, idx) => (
                         <div key={idx} className="flex gap-3 items-center">
-                            <input type="text" placeholder="Name" className="flex-1 border rounded-lg p-2 text-sm" value={v.name} onChange={e => handleVariantChange(idx, 'name', e.target.value)} />
-                            <input type="number" placeholder="Price" className="flex-1 border rounded-lg p-2 text-sm" value={v.price} onChange={e => handleVariantChange(idx, 'price', e.target.value)} />
+                            <input type="text" placeholder="Name (e.g. Large)" className="flex-1 border rounded-lg p-2 text-sm" value={v.name} onChange={e => handleVariantChange(idx, 'name', e.target.value)} />
+                            <input type="number" placeholder="Price (e.g. 5000)" className="flex-1 border rounded-lg p-2 text-sm" value={v.price} onChange={e => handleVariantChange(idx, 'price', e.target.value)} />
                             <button type="button" onClick={() => handleRemoveVariant(idx)} className="text-red-400 hover:text-red-600"><Trash size={18}/></button>
                         </div>
                     ))}
