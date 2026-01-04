@@ -2,13 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Loader2, Plus, Trash, X, CheckSquare, Square } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Plus, Trash, X, CheckSquare, Square, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 
 // ✅ CONFIG
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
 
-// Interface untuk Tipe Data
 interface Option {
   id: string;
   label: string;
@@ -32,20 +31,15 @@ export default function CreateProductPage() {
   const [price, setPrice] = useState("");
   const [categoryId, setCategoryId] = useState("1");
   const [description, setDescription] = useState("");
-  const [image, setImage] = useState<File | null>(null);
   const [isPromo, setIsPromo] = useState(false);
 
-  // State Variants (Size)
+  // State Variants & Modifiers
   const [variants, setVariants] = useState([{ name: "", price: "" }]);
-
-  // State Modifiers (Groups: Sugar, Ice, etc)
   const [modifiers, setModifiers] = useState<Modifier[]>([]);
 
-  // --- CEK TOKEN SAAT LOAD ---
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-        // Kalau gak ada token, tendang ke login admin
         router.push('/admin/login'); 
     }
   }, [router]);
@@ -74,9 +68,7 @@ export default function CreateProductPage() {
     setModifiers([...modifiers, newGroup]);
   };
 
-  const removeModifierGroup = (index: number) => {
-    setModifiers(modifiers.filter((_, i) => i !== index));
-  };
+  const removeModifierGroup = (index: number) => setModifiers(modifiers.filter((_, i) => i !== index));
 
   const updateModifierGroup = (index: number, field: keyof Modifier, value: any) => {
     const newMods = [...modifiers];
@@ -109,13 +101,12 @@ export default function CreateProductPage() {
     setModifiers(newMods);
   };
 
-  // --- SUBMIT (INI BAGIAN YG DIPERBAIKI) ---
+  // --- SUBMIT (VERSI SIMPEL TANPA UPLOAD FILE) ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // 1. Ambil Token
-    const token = localStorage.getItem('token'); // Pastikan key-nya 'token' atau 'admin_token' (sesuai login mu)
+    const token = localStorage.getItem('token');
     
     if (!token) {
         alert("Sesi Anda habis. Silakan login ulang.");
@@ -124,69 +115,62 @@ export default function CreateProductPage() {
         return;
     }
 
-    const formData = new FormData();
-    formData.append("name", name);
-    formData.append("price", price);
-    formData.append("category_id", categoryId);
-    formData.append("description", description);
-    if (image) formData.append("image", image);
-    formData.append("is_promo", isPromo ? "1" : "0");
-
-    // Serialize Variants & Modifiers
-    const validVariants = variants.filter(v => v.name.trim() !== "");
-    formData.append("variants", JSON.stringify(validVariants));
-
-    const validModifiers = modifiers.map(mod => ({
-        name: mod.name,
-        required: mod.required,
-        options: mod.options.filter(opt => opt.label.trim() !== "").map(opt => ({
-            label: opt.label,
-            price: opt.price || 0,
-            isDefault: opt.isDefault
-        }))
-    })).filter(mod => mod.name.trim() !== "");
-    
-    formData.append("modifiers", JSON.stringify(validModifiers));
+    // Kita gunakan object biasa karena sudah tidak ada file (Multipart tidak wajib)
+    const payload = {
+        name,
+        price,
+        category_id: categoryId,
+        description,
+        is_promo: isPromo,
+        variants: variants.filter(v => v.name.trim() !== ""),
+        modifiers: modifiers.map(mod => ({
+            name: mod.name,
+            required: mod.required,
+            options: mod.options.filter(opt => opt.label.trim() !== "").map(opt => ({
+                label: opt.label,
+                price: opt.price || 0,
+                isDefault: opt.isDefault
+            }))
+        })).filter(mod => mod.name.trim() !== "")
+    };
 
     try {
         const res = await fetch(`${BACKEND_URL}/api/admin/products`, {
             method: "POST",
             headers: {
-                // 'Content-Type': 'multipart/form-data', ❌ JANGAN MANUAL SET INI UTK UPLOAD FILE
-                'Accept': 'application/json', // ✅ WAJIB: Biar Laravel tau kita minta JSON
-                'Authorization': `Bearer ${token}` // ✅ WAJIB: Biar gak diredirect ke login
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
-            body: formData, 
+            body: JSON.stringify(payload), 
         });
 
         const data = await res.json();
 
         if (res.ok) {
-            alert("Produk berhasil dibuat!");
+            alert("Produk berhasil dibuat! (Gambar diset otomatis)");
             router.push("/admin/products");
         } else {
-            console.error(data);
-            // Kalau token expired (401), tendang keluar
             if (res.status === 401) {
                 alert("Sesi habis. Login lagi ya.");
-                localStorage.removeItem('token');
                 router.push('/admin/login');
             } else {
-                alert("Gagal: " + (data.message || JSON.stringify(data)));
+                alert("Gagal: " + (data.message || "Terjadi kesalahan"));
             }
         }
     } catch (error) {
-        console.error(error);
-        alert("Terjadi kesalahan sistem.");
+        alert("Terjadi kesalahan koneksi ke server.");
     } finally {
         setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-5xl mx-auto pb-20">
+    <div className="max-w-5xl mx-auto pb-20 px-4 pt-10">
         <div className="flex items-center gap-4 mb-6">
-            <Link href="/admin/products" className="p-2 bg-white rounded-full shadow-sm hover:bg-gray-100 transition"><ArrowLeft size={20} className="text-navy-900"/></Link>
+            <Link href="/admin/products" className="p-2 bg-white rounded-full shadow-sm hover:bg-gray-100 transition">
+                <ArrowLeft size={20} className="text-navy-900"/>
+            </Link>
             <h1 className="text-2xl font-bold text-navy-900">Create New Product</h1>
         </div>
 
@@ -211,16 +195,18 @@ export default function CreateProductPage() {
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-2">Category</label>
                         <select className="w-full border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-navy-900 bg-white" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
-                            {/* Nanti ini fetch dari API */}
                             <option value="1">Coffee</option>
                             <option value="2">Non-Coffee</option>
                             <option value="3">Food</option>
-                            <option value="4">Dessert</option>
+                            <option value="4">Snack/Dessert</option>
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Product Image</label>
-                        <input type="file" required accept="image/*" className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-navy-50 file:text-navy-700 hover:file:bg-navy-100" onChange={e => setImage(e.target.files?.[0] || null)} />
+                        <label className="block text-sm font-bold text-gray-700 mb-2">System Info</label>
+                        <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl text-gray-500 text-sm italic border border-dashed border-gray-300">
+                           <ImageIcon size={18} />
+                           Image will be set automatically based on category
+                        </div>
                     </div>
                 </div>
 
@@ -240,63 +226,55 @@ export default function CreateProductPage() {
                 <div className="flex justify-between items-center mb-6">
                     <div>
                         <h3 className="font-bold text-blue-900 text-lg flex items-center gap-2">📏 Size Variants</h3>
-                        <p className="text-sm text-blue-600 mt-1">Add sizes like Regular, Large. Leave empty if no size.</p>
+                        <p className="text-sm text-blue-600 mt-1">Add sizes like Regular, Large.</p>
                     </div>
                     <button type="button" onClick={handleAddVariant} className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold text-sm shadow-sm hover:bg-blue-100 transition flex items-center gap-2"><Plus size={16}/> Add Size</button>
                 </div>
                 
                 <div className="space-y-3">
                     {variants.map((v, idx) => (
-                        <div key={idx} className="flex gap-4 items-center animate-in fade-in slide-in-from-top-2">
-                            <input type="text" placeholder="Size Name (e.g. Large)" className="flex-1 border-none shadow-sm rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-300" value={v.name} onChange={e => handleVariantChange(idx, 'name', e.target.value)} />
+                        <div key={idx} className="flex gap-4 items-center">
+                            <input type="text" placeholder="Size Name" className="flex-1 border-none shadow-sm rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-300" value={v.name} onChange={e => handleVariantChange(idx, 'name', e.target.value)} />
                             <input type="number" placeholder="Price (Rp)" className="w-32 md:w-48 border-none shadow-sm rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-300" value={v.price} onChange={e => handleVariantChange(idx, 'price', e.target.value)} />
-                            <button type="button" onClick={() => handleRemoveVariant(idx)} className="bg-white p-3 rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50 transition shadow-sm"><Trash size={18}/></button>
+                            <button type="button" onClick={() => handleRemoveVariant(idx)} className="bg-white p-3 rounded-xl text-red-400 hover:text-red-600 transition shadow-sm"><Trash size={18}/></button>
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* 3. MODIFIERS (CUSTOMIZATION) */}
+            {/* 3. MODIFIERS */}
             <div className="bg-purple-50 p-8 rounded-3xl border border-purple-100 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
                     <div>
                         <h3 className="font-bold text-purple-900 text-lg flex items-center gap-2">✨ Customization Groups</h3>
-                        <p className="text-sm text-purple-600 mt-1">Add groups like "Sugar Level", "Toppings", "Ice Level".</p>
                     </div>
                     <button type="button" onClick={addModifierGroup} className="bg-purple-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md hover:bg-purple-700 transition flex items-center gap-2"><Plus size={16}/> Add Group</button>
                 </div>
 
                 <div className="space-y-6">
                     {modifiers.map((mod, gIdx) => (
-                        <div key={mod.id} className="bg-white p-6 rounded-2xl shadow-sm border border-purple-100 relative group animate-in zoom-in-95 duration-200">
+                        <div key={mod.id} className="bg-white p-6 rounded-2xl shadow-sm border border-purple-100 relative group">
                             <button type="button" onClick={() => removeModifierGroup(gIdx)} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition"><X size={20}/></button>
-                            
-                            {/* Group Header */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pr-10">
                                 <div>
                                     <label className="text-xs font-bold text-gray-400 uppercase mb-1 block">Group Name</label>
                                     <input type="text" placeholder="e.g. Sugar Level" className="w-full font-bold text-gray-700 border-b-2 border-purple-100 focus:border-purple-500 outline-none pb-1 transition-colors" value={mod.name} onChange={e => updateModifierGroup(gIdx, 'name', e.target.value)} />
                                 </div>
                                 <div className="flex items-end pb-1">
-                                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                                        <input type="checkbox" className="w-4 h-4 text-purple-600 rounded focus:ring-0" checked={mod.required} onChange={e => updateModifierGroup(gIdx, 'required', e.target.checked)} />
-                                        <span className="text-sm font-medium text-gray-600">Is Required? (Wajib Pilih)</span>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" className="w-4 h-4 text-purple-600 rounded" checked={mod.required} onChange={e => updateModifierGroup(gIdx, 'required', e.target.checked)} />
+                                        <span className="text-sm font-medium text-gray-600">Is Required?</span>
                                     </label>
                                 </div>
                             </div>
-
-                            {/* Options List */}
                             <div className="pl-4 border-l-2 border-gray-100 space-y-3">
                                 {mod.options.map((opt, oIdx) => (
                                     <div key={opt.id} className="flex gap-3 items-center">
-                                        <input type="text" placeholder="Option Label (e.g. Less Sugar)" className="flex-1 text-sm border rounded-lg py-1.5 px-3 focus:ring-1 focus:ring-purple-400 outline-none" value={opt.label} onChange={e => updateOption(gIdx, oIdx, 'label', e.target.value)} />
-                                        <input type="number" placeholder="+Rp (0 if free)" className="w-24 md:w-32 text-sm border rounded-lg py-1.5 px-3 focus:ring-1 focus:ring-purple-400 outline-none" value={opt.price} onChange={e => updateOption(gIdx, oIdx, 'price', e.target.value)} />
-                                        
-                                        {/* Default Checkbox */}
-                                        <button type="button" onClick={() => updateOption(gIdx, oIdx, 'isDefault', !opt.isDefault)} className={`p-1.5 rounded-md transition ${opt.isDefault ? 'text-purple-600 bg-purple-50' : 'text-gray-300 hover:text-gray-500'}`} title="Set as Default">
+                                        <input type="text" placeholder="Option" className="flex-1 text-sm border rounded-lg py-1.5 px-3 focus:ring-1 focus:ring-purple-400 outline-none" value={opt.label} onChange={e => updateOption(gIdx, oIdx, 'label', e.target.value)} />
+                                        <input type="number" placeholder="+Rp" className="w-24 md:w-32 text-sm border rounded-lg py-1.5 px-3 focus:ring-1 focus:ring-purple-400 outline-none" value={opt.price} onChange={e => updateOption(gIdx, oIdx, 'price', e.target.value)} />
+                                        <button type="button" onClick={() => updateOption(gIdx, oIdx, 'isDefault', !opt.isDefault)} className={`p-1.5 rounded-md transition ${opt.isDefault ? 'text-purple-600 bg-purple-50' : 'text-gray-300 hover:text-gray-500'}`}>
                                             {opt.isDefault ? <CheckSquare size={18} /> : <Square size={18} />}
                                         </button>
-
                                         <button type="button" onClick={() => removeOptionFromGroup(gIdx, oIdx)} className="text-gray-300 hover:text-red-500 p-1"><X size={16}/></button>
                                     </div>
                                 ))}
@@ -309,7 +287,7 @@ export default function CreateProductPage() {
 
             {/* SAVE BUTTON */}
             <div className="sticky bottom-6 z-10">
-                <button type="submit" disabled={loading} className="w-full py-4 bg-navy-900 text-white font-bold rounded-2xl shadow-xl hover:bg-gold-500 hover:text-navy-900 transition-all flex justify-center items-center gap-3 disabled:bg-gray-400 disabled:cursor-not-allowed transform active:scale-[0.99]">
+                <button type="submit" disabled={loading} className="w-full py-4 bg-navy-900 text-white font-bold rounded-2xl shadow-xl hover:bg-gold-500 hover:text-navy-900 transition-all flex justify-center items-center gap-3 disabled:bg-gray-400 disabled:cursor-not-allowed">
                     {loading ? <Loader2 className="animate-spin" /> : <><Save size={20} /> Save Product</>}
                 </button>
             </div>
