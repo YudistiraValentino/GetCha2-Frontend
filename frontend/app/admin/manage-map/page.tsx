@@ -23,13 +23,12 @@ export default function AdminMapManager() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Cek Login
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) router.push('/admin/login');
   }, [router]);
 
-  // Logic Baca File SVG
+  // Logic SVG
   const processFile = (file: File) => {
     setErrorMsg(null);
     setDetectedSeats([]);
@@ -65,41 +64,34 @@ export default function AdminMapManager() {
 
   const onDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(true); };
   const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(false); };
-  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault(); setIsDragging(false);
-    if(e.dataTransfer.files?.[0]) processFile(e.dataTransfer.files[0]);
-  };
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(false); if(e.dataTransfer.files?.[0]) processFile(e.dataTransfer.files[0]); };
 
-  // 🔥 LOGIC UPLOAD (FIXED DENGAN TOKEN BODY)
+  // 🔥 LOGIC UPLOAD (NUCLEAR OPTION: TOKEN DI URL)
   const handleSave = async () => {
     if (!selectedFile) return alert("Pilih file dulu!");
     
     setLoading(true);
-
-    // Ambil Token
     const token = localStorage.getItem('token');
+    
     if (!token) {
         alert("Sesi habis. Login ulang.");
         router.push('/admin/login');
         return;
     }
 
-    // Siapkan FormData
     const formData = new FormData();
     formData.append("name", "Store Layout " + new Date().toLocaleDateString()); 
     formData.append("image", selectedFile);
     formData.append("is_active", "1");
-    
-    // 🔥 JURUS RAHASIA: Selipkan token di body
-    formData.append("token", token); 
 
     try {
-        const res = await fetch(`${BACKEND_URL}/api/admin/maps`, {
+        // 🔥 INI DIA KUNCINYA: ?token=${token}
+        // Kita bypass header authorization yang sering dibuang server.
+        const res = await fetch(`${BACKEND_URL}/api/admin/maps?token=${token}`, {
             method: "POST",
             headers: {
                 'Accept': 'application/json',
-                'Authorization': `Bearer ${token}` // Tetap kirim Header juga
-                // Content-Type OTOMATIS oleh browser
+                // Header Authorization kita hapus biar gak bikin bingung server
             },
             body: formData
         });
@@ -113,6 +105,7 @@ export default function AdminMapManager() {
             console.error("Upload Error:", data);
             if(res.status === 401) {
                 alert("Gagal: Token Expired. Login ulang.");
+                localStorage.removeItem('token');
                 router.push('/admin/login');
             } else {
                 alert("Gagal Upload: " + (data.message || "Error server"));
@@ -138,34 +131,20 @@ export default function AdminMapManager() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* AREA PREVIEW */}
-          <div 
-            className={`lg:col-span-2 rounded-2xl border-2 min-h-[500px] flex flex-col relative transition-all ${isDragging ? "border-blue-500 bg-blue-50 border-dashed" : "border-gray-200 bg-white"}`}
-            onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-          >
+          <div className={`lg:col-span-2 rounded-2xl border-2 min-h-[500px] flex flex-col relative transition-all ${isDragging ? "border-blue-500 bg-blue-50 border-dashed" : "border-gray-200 bg-white"}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
              <div className="p-4 border-b flex justify-between">
                 <span className="font-bold text-gray-500">PREVIEW AREA</span>
                 {detectedSeats.length > 0 && <span className="text-green-600 font-bold flex gap-1"><CheckCircle/> {detectedSeats.length} Seats</span>}
              </div>
              <div className="flex-1 flex items-center justify-center p-4">
-                {svgContent ? (
-                    <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: svgContent }} />
-                ) : (
-                    <div className="text-gray-400 text-center"><FileUp size={48} className="mx-auto mb-2"/> Drag & Drop Here</div>
-                )}
+                {svgContent ? <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: svgContent }} /> : <div className="text-gray-400 text-center"><FileUp size={48} className="mx-auto mb-2"/> Drag & Drop Here</div>}
              </div>
           </div>
 
-          {/* SIDEBAR ACTION */}
           <div className="bg-white p-6 rounded-2xl shadow border h-fit">
             <h3 className="font-bold text-navy-900 mb-4 flex gap-2"><Info/> Status</h3>
             {errorMsg && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{errorMsg}</div>}
-            
-            <button 
-                onClick={handleSave} 
-                disabled={loading || !selectedFile} 
-                className="w-full py-4 bg-navy-900 text-white font-bold rounded-xl hover:bg-gold-500 hover:text-navy-900 disabled:bg-gray-300 transition flex justify-center gap-2"
-            >
+            <button onClick={handleSave} disabled={loading || !selectedFile} className="w-full py-4 bg-navy-900 text-white font-bold rounded-xl hover:bg-gold-500 hover:text-navy-900 disabled:bg-gray-300 transition flex justify-center gap-2">
                 {loading ? <Loader2 className="animate-spin"/> : <Save/>} Publish Map
             </button>
           </div>
