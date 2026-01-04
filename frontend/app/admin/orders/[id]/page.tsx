@@ -3,10 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Printer, Save, Loader2, Utensils, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Printer, Loader2, Utensils, ShoppingBag, Save } from "lucide-react";
 
-// Ganti baris 7 jadi begini:
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
 
 export default function OrderDetailPage() {
   const router = useRouter();
@@ -26,13 +25,23 @@ export default function OrderDetailPage() {
     if(!id) return;
     
     const fetchOrder = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) { router.push('/admin/login'); return; }
+
         try {
-            const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/orders/${id}`);
+            const res = await fetch(`${BACKEND_URL}/api/admin/orders/${id}`, {
+                headers: { 
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}` // ✅ TAMBAH TOKEN
+                }
+            });
             const json = await res.json();
             if (json.success) {
                 setOrder(json.data);
                 setStatus(json.data.status);
                 setPaymentStatus(json.data.payment_status);
+            } else {
+                if(res.status === 401) router.push('/admin/login');
             }
         } catch (error) {
             console.error(error);
@@ -42,15 +51,21 @@ export default function OrderDetailPage() {
     };
 
     fetchOrder();
-  }, [id]);
+  }, [id, router]);
 
   // 2. UPDATE STATUS
   const handleUpdate = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
     setUpdating(true);
     try {
-        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/orders/${id}/status`, {
+        const res = await fetch(`${BACKEND_URL}/api/admin/orders/${id}/status`, {
             method: "PUT", 
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` // ✅ TAMBAH TOKEN
+            },
             body: JSON.stringify({ status, payment_status: paymentStatus })
         });
 
@@ -73,11 +88,9 @@ export default function OrderDetailPage() {
     window.print();
   };
 
-  // Helper function untuk render varian/modifier dengan aman
   const renderOption = (optionData: any) => {
     if (!optionData) return null;
     if (typeof optionData === 'string') return optionData;
-    // Jika bentuknya Object {Sugar: 'Less', Temp: 'Ice'}, ubah jadi string rapi
     return Object.entries(optionData)
       .map(([key, value]) => `${key}: ${value}`)
       .join(', ');
@@ -87,7 +100,7 @@ export default function OrderDetailPage() {
   if (!order) return <div className="p-10 text-center text-red-500 font-bold">Order not found.</div>;
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto pb-20">
       {/* HEADER */}
       <div className="flex items-center justify-between mb-6 print:hidden">
         <div className="flex items-center gap-4">
@@ -111,8 +124,6 @@ export default function OrderDetailPage() {
                             <div>
                                 <p className="font-bold text-navy-900 text-lg">{item.product_name}</p>
                                 <div className="text-sm text-gray-500 mt-1 flex flex-wrap gap-1">
-                                    
-                                    {/* --- MULAI BAGIAN FIX --- */}
                                     {item.variants && (
                                         <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs border border-blue-100">
                                             {renderOption(item.variants)}
@@ -123,8 +134,6 @@ export default function OrderDetailPage() {
                                             {renderOption(item.modifiers)}
                                         </span>
                                     )}
-                                    {/* --- AKHIR BAGIAN FIX --- */}
-
                                 </div>
                             </div>
                             <div className="text-right">
@@ -133,10 +142,6 @@ export default function OrderDetailPage() {
                             </div>
                         </div>
                     ))}
-                    
-                    {(!order.items || order.items.length === 0) && (
-                        <p className="text-center text-gray-400 py-4">Tidak ada item dalam pesanan ini.</p>
-                    )}
                 </div>
                 <div className="mt-6 pt-6 border-t-2 border-dashed border-gray-200 flex justify-between items-center">
                     <span className="text-lg font-bold text-gray-600">Total Amount</span>
@@ -148,7 +153,6 @@ export default function OrderDetailPage() {
         {/* KANAN: INFO & STATUS */}
         <div className="space-y-6">
             
-            {/* INFO CARD */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
                 <div className="absolute -top-4 -right-4 opacity-5 pointer-events-none">
                     {order.order_type === 'dine_in' ? <Utensils size={100}/> : <ShoppingBag size={100}/>}
@@ -181,7 +185,6 @@ export default function OrderDetailPage() {
                 </div>
             </div>
 
-            {/* STATUS UPDATE */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-yellow-500">
                 <h3 className="text-lg font-bold mb-4">Update Status</h3>
                 

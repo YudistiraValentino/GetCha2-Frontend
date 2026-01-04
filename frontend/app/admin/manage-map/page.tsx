@@ -108,9 +108,6 @@ export default function AdminMapManager() {
     // 2. Ambil Token Terbaru
     const token = localStorage.getItem('token');
     
-    // Debugging Token di Console
-    console.log("Mencoba upload dengan token:", token);
-
     if (!token) {
         alert("Error: Token tidak ditemukan. Harap login ulang.");
         router.push('/admin/login');
@@ -129,9 +126,8 @@ export default function AdminMapManager() {
             method: "POST",
             headers: {
                 'Accept': 'application/json',        // Minta balikan JSON
-                'Authorization': `Bearer ${token}`   // ✅ WAJIB: Kartu akses admin
-                // ❌ JANGAN SET 'Content-Type': 'multipart/form-data' SECARA MANUAL!
-                // Biarkan browser yang mengaturnya otomatis saat ada FormData.
+                'Authorization': `Bearer ${token}`   // ✅ WAJIB: Token Admin
+                // ❌ JANGAN SET Content-Type SECARA MANUAL SAAT KIRIM FORMDATA!
             },
             body: formData
         });
