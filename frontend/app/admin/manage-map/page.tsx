@@ -11,23 +11,25 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-
 export default function AdminMapManager() {
   const router = useRouter();
   
-  // State
+  // State Data
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [detectedSeats, setDetectedSeats] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
+  // State UI
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Cek Login Pas Masuk
+  // 1. Cek Login
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) router.push('/admin/login');
   }, [router]);
 
-  // Logic Preview SVG
+  // Logic Baca File SVG
   const processFile = (file: File) => {
     setErrorMsg(null);
     setDetectedSeats([]);
@@ -46,7 +48,7 @@ export default function AdminMapManager() {
         } else {
           const seatIds = Array.from(seats).map(seat => seat.id);
           setDetectedSeats(seatIds);
-          setSelectedFile(file); // Simpan file
+          setSelectedFile(file);
         }
         setSvgContent(content);
       };
@@ -61,16 +63,20 @@ export default function AdminMapManager() {
     if (file) processFile(file);
   };
 
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(true); };
+  const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(false); };
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault(); setIsDragging(false);
     if(e.dataTransfer.files?.[0]) processFile(e.dataTransfer.files[0]);
   };
 
-  // 🔥 UPDATE LOGIC UPLOAD (FIXED TOKEN)
+  // 🔥 LOGIC UPLOAD (FIXED DENGAN TOKEN BODY)
   const handleSave = async () => {
     if (!selectedFile) return alert("Pilih file dulu!");
     
-    // 1. AMBIL TOKEN TERBARU
+    setLoading(true);
+
+    // Ambil Token
     const token = localStorage.getItem('token');
     if (!token) {
         alert("Sesi habis. Login ulang.");
@@ -78,23 +84,22 @@ export default function AdminMapManager() {
         return;
     }
 
-    setLoading(true);
-
-    // 2. SIAPKAN FORM DATA
+    // Siapkan FormData
     const formData = new FormData();
     formData.append("name", "Store Layout " + new Date().toLocaleDateString()); 
     formData.append("image", selectedFile);
     formData.append("is_active", "1");
+    
+    // 🔥 JURUS RAHASIA: Selipkan token di body
+    formData.append("token", token); 
 
     try {
         const res = await fetch(`${BACKEND_URL}/api/admin/maps`, {
             method: "POST",
             headers: {
-                // ⚠️ PENTING: JANGAN tulis 'Content-Type': 'multipart/form-data'
-                // Browser akan otomatis menambahkannya beserta boundary.
-                // CUKUP AUTHORIZATION SAJA:
                 'Accept': 'application/json',
-                'Authorization': `Bearer ${token}` 
+                'Authorization': `Bearer ${token}` // Tetap kirim Header juga
+                // Content-Type OTOMATIS oleh browser
             },
             body: formData
         });
@@ -136,9 +141,7 @@ export default function AdminMapManager() {
           {/* AREA PREVIEW */}
           <div 
             className={`lg:col-span-2 rounded-2xl border-2 min-h-[500px] flex flex-col relative transition-all ${isDragging ? "border-blue-500 bg-blue-50 border-dashed" : "border-gray-200 bg-white"}`}
-            onDragOver={(e)=>{e.preventDefault(); setIsDragging(true)}}
-            onDragLeave={(e)=>{e.preventDefault(); setIsDragging(false)}}
-            onDrop={onDrop}
+            onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
           >
              <div className="p-4 border-b flex justify-between">
                 <span className="font-bold text-gray-500">PREVIEW AREA</span>
