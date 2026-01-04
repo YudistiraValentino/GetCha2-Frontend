@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from "next/navigation";
 import { Coffee, Lock, Mail, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 
-// ✅ CONFIG: Pastikan URL Backend Benar
+// ✅ CONFIG: URL Backend
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
 
 export default function AdminLoginPage() {
@@ -21,39 +21,48 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-        // 🔥 PERBAIKAN PENTING: URL disesuaikan dengan web.php (/login)
-        // Kita pakai /login karena route di web.php ada di root, bukan di /api/admin
-        const res = await fetch(`${BACKEND_URL}/login`, {
+        // 🔥 PERBAIKAN VITAL DISINI:
+        // Arahkan ke /api/admin/login (Sesuai routes/api.php)
+        // Jangan ke /login (itu route web dummy)
+        const url = `${BACKEND_URL}/api/admin/login`; 
+
+        console.log("Attempting login to:", url); // Debugging
+
+        const res = await fetch(url, {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json", 
-                "Accept": "application/json" // Wajib buat Laravel
+                "Accept": "application/json" 
             },
             body: JSON.stringify({ email, password })
         });
 
-        // Cek dulu status response sebelum parsing JSON
-        if (!res.ok) {
-            // Kalau error 404/500, kita tangkap statusnya biar tau salahnya apa
-            throw new Error(`Server Error: ${res.status} ${res.statusText}`);
-        }
-
         const json = await res.json();
 
-        if (json.success) {
-            // ✅ SIMPAN TOKEN DARI 'json.data.token'
-            localStorage.setItem("token", json.data.token);
-            localStorage.setItem("user", JSON.stringify(json.data.user));
-            
-            // Redirect
-            router.push("/admin/products"); // Langsung ke products aja biar keliatan
+        if (res.ok && json.success) {
+            // ✅ SIMPAN TOKEN & USER
+            // API kita mengembalikan struktur: { success: true, data: { token: "...", user: {...} } }
+            // Kita pakai optional chaining (?.) biar aman kalau strukturnya agak beda
+            const token = json.data?.token || json.token;
+            const user = json.data?.user || json.user;
+
+            if (token) {
+                localStorage.setItem("token", token);
+                if (user) localStorage.setItem("user", JSON.stringify(user));
+                
+                // Redirect ke Dashboard
+                alert("Login Berhasil! Selamat datang.");
+                router.push("/admin/orders"); 
+            } else {
+                setError("Login berhasil, tapi Token tidak diterima dari server.");
+            }
         } else {
-            setError(json.message || "Login gagal.");
+            // Tampilkan pesan error dari backend
+            setError(json.message || "Email atau Password salah.");
         }
     } catch (err: any) {
-        console.error(err);
-        // Tampilkan pesan error asli biar gampang debugging
-        setError(err.message || "Gagal terhubung ke server.");
+        console.error("Login Error:", err);
+        setError("Gagal terhubung ke server. Cek koneksi internet.");
     } finally {
         setLoading(false);
     }
@@ -133,7 +142,7 @@ export default function AdminLoginPage() {
             </form>
 
             <div className="mt-8 text-center">
-                <p className="text-xs text-gray-400">&copy; 2025 GetCha Coffee App. Secure Access Only.</p>
+                <p className="text-xs text-gray-400">&copy; 2026 GetCha Coffee App. Secure Access Only.</p>
             </div>
         </div>
       </div>
