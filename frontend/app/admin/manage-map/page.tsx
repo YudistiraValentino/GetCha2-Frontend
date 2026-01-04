@@ -60,37 +60,33 @@ export default function AdminMapManager() {
   // 🔥 LOGIC UPLOAD (SUPER STRICT URL TOKEN)
   const handleSave = async () => {
     if (!selectedFile) return alert("Pilih file dulu!");
+    
     setLoading(true);
-
     const token = localStorage.getItem('token');
+    
     if (!token) {
         alert("Sesi habis. Login ulang.");
         router.push('/admin/login');
         return;
     }
 
-    // 1. SIAPKAN DATA
     const formData = new FormData();
     formData.append("name", "Store Layout " + new Date().toLocaleDateString()); 
     formData.append("image", selectedFile);
     formData.append("is_active", "1");
 
-    // 2. SIAPKAN URL YANG VALID
-    // Kita pakai object URL biar gak ada error typo/spasi
-    // Hasilnya: https://.../api/admin/maps?token=123xxxxx
-    const uploadUrl = new URL(`${BACKEND_URL}/api/admin/maps`);
-    uploadUrl.searchParams.append('token', token);
-
-    console.log("Mengupload ke:", uploadUrl.toString()); // Debug di Console
-
     try {
-        const res = await fetch(uploadUrl.toString(), {
+        // 🔥 KITA RAKIT URL MANUAL STRING (Bukan Object URL)
+        // Ini memastikan formatnya: .../maps?token=eyJh...
+        const urlTarget = `${BACKEND_URL}/api/admin/maps?token=${encodeURIComponent(token)}`;
+
+        console.log("🚀 Uploading to:", urlTarget);
+
+        const res = await fetch(urlTarget, {
             method: "POST",
             headers: {
                 'Accept': 'application/json',
-                // ❌ KITA HAPUS AUTHORIZATION HEADER
-                // Biar server dipaksa baca token dari URL aja.
-                // Jangan ada 'Authorization': ...
+                // Header Authorization DIHAPUS TOTAL. Kita andalkan URL.
             },
             body: formData
         });
@@ -101,17 +97,16 @@ export default function AdminMapManager() {
             alert("✅ Map Berhasil Diupload!");
             window.location.reload();
         } else {
-            console.error("Upload Error:", data);
-            if(res.status === 401) {
-                alert("Gagal: Token Ditolak Server (401). Coba Logout & Login lagi.");
-                // Jangan auto-logout dulu, biar user bisa inspect
-            } else {
-                alert("Gagal Upload: " + (data.message || "Error server"));
-            }
+            console.error("Server Response:", data);
+            
+            // Tampilkan pesan detail dari debug info backend
+            const detail = data.debug_info ? JSON.stringify(data.debug_info) : "";
+            alert(`Gagal: ${data.message}\nDebug: ${detail}`);
+            
+            if(res.status === 401) router.push('/admin/login');
         }
     } catch (error) {
-        console.error("Network Error:", error);
-        alert("Gagal koneksi ke server. Cek Console.");
+        alert("Gagal koneksi ke server.");
     } finally {
         setLoading(false);
     }
