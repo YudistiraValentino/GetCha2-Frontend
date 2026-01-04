@@ -1,102 +1,117 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import React, { useEffect, useState } from 'react';
 import Link from "next/link";
+import { Edit, Trash2, Plus, Ticket, Calendar, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import NavbarDashboard from "@/app/components/layout/NavbarDashboard"; // Pastikan path ini benar
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
 
-export default function AdminPromoCreate() {
+export default function AdminPromosList() {
   const router = useRouter(); 
-  const [submitting, setSubmitting] = useState(false);
+  const [promos, setPromos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // States
-  const [title, setTitle] = useState("");
-  const [code, setCode] = useState("");
-  const [type, setType] = useState("percent");
-  const [discountAmount, setDiscountAmount] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [description, setDescription] = useState("");
-  const [image, setImage] = useState<File | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // FETCH LIST
+  const fetchPromos = async () => {
     const token = localStorage.getItem('token');
     if (!token) { router.push('/admin/login'); return; }
 
-    setSubmitting(true);
-
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("code", code.toUpperCase());
-    formData.append("type", type);
-    formData.append("discount_amount", discountAmount);
-    formData.append("start_date", startDate);
-    formData.append("end_date", endDate);
-    formData.append("description", description);
-    formData.append("is_active", "1");
-    if (image) formData.append("image", image);
-
     try {
-        // 🔥 TOKEN DI URL (Nuclear Option)
-        const res = await fetch(`${BACKEND_URL}/api/admin/promos?token=${token}`, {
-            method: "POST",
-            headers: { 'Accept': 'application/json' }, // Header Auth dihapus
-            body: formData
-        });
-
-        const json = await res.json();
-
-        if (res.ok) {
-            alert("Promo created!");
-            router.push("/admin/promos");
-        } else {
-            console.error("Error:", json);
-            if(res.status === 401) {
-                alert("Token Expired. Login ulang.");
-                router.push('/admin/login');
-            } else {
-                alert("Gagal: " + json.message);
-            }
+      // Kita pakai URL Query Param juga disini buat jaga-jaga
+      const res = await fetch(`${BACKEND_URL}/api/admin/promos?token=${token}`, {
+        headers: { 
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}` 
         }
+      });
+      const json = await res.json();
+      if (res.ok) {
+          setPromos(json.data || []);
+      } else {
+          if (res.status === 401) router.push('/admin/login');
+      }
     } catch (error) {
-        alert("Gagal koneksi ke server.");
+      console.error(error);
     } finally {
-        setSubmitting(false);
+      setLoading(false);
     }
   };
 
+  useEffect(() => { fetchPromos(); }, []);
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Hapus promo ini?")) return;
+    const token = localStorage.getItem('token');
+    
+    try {
+        await fetch(`${BACKEND_URL}/api/admin/promos/${id}?token=${token}`, { 
+            method: "DELETE",
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        fetchPromos();
+    } catch (e) { alert("Gagal hapus"); }
+  };
+
+  const getImageUrl = (path: string) => {
+    if (!path) return "/Image/placeholder.png";
+    if (path.startsWith("http")) return path;
+    let clean = path.replace('public/', '');
+    if (!clean.startsWith('/')) clean = '/' + clean;
+    if (!clean.startsWith('/storage') && !clean.startsWith('/images') && !clean.startsWith('/maps')) clean = '/storage' + clean;
+    return `${BACKEND_URL}${clean}`;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 pt-32 px-6">
-      <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-4 mb-6">
-            <Link href="/admin/promos" className="p-2 bg-white rounded-full shadow hover:bg-gray-100"><ArrowLeft size={20}/></Link>
-            <h1 className="text-2xl font-bold text-navy-900">Create New Promo</h1>
+    <main className="min-h-screen bg-gray-50 pb-20">
+      <NavbarDashboard /> 
+      <div className="container mx-auto px-6 pt-32">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+                <h1 className="text-2xl font-bold text-navy-900">Deals & Promos</h1>
+                <p className="text-gray-500 text-sm">Manage vouchers and special offers.</p>
+            </div>
+            <Link href="/admin/promos/create" className="bg-navy-900 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-gold-500 hover:text-navy-900">
+                <Plus size={20} /> Add New Promo
+            </Link>
           </div>
 
-          <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow border border-gray-100 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div><label className="block text-sm font-bold mb-1">Title</label><input required className="w-full border rounded-lg p-2.5" value={title} onChange={e=>setTitle(e.target.value)} /></div>
-                <div><label className="block text-sm font-bold mb-1">Code</label><input required className="w-full border rounded-lg p-2.5 uppercase" value={code} onChange={e=>setCode(e.target.value)} /></div>
+          {loading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin"/></div> : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {promos.map((promo) => (
+                    <div key={promo.id} className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col group">
+                        <div className="h-40 bg-gray-100 relative">
+                            {promo.image ? (
+                                <Image src={getImageUrl(promo.image)} alt={promo.title} fill className="object-cover" unoptimized/>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-gray-300"><Ticket size={40}/></div>
+                            )}
+                            <div className="absolute top-3 right-3">
+                                {promo.is_active === 1 ? <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full flex gap-1 items-center"><CheckCircle size={10}/> ACTIVE</span> : <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full flex gap-1 items-center"><XCircle size={10}/> INACTIVE</span>}
+                            </div>
+                        </div>
+                        <div className="p-5 flex-1 flex flex-col">
+                            <h3 className="font-bold text-lg text-navy-900 line-clamp-1">{promo.title}</h3>
+                            <span className="bg-gold-100 text-gold-700 text-xs font-black px-2 py-1 rounded border border-gold-200 uppercase w-fit mt-1">{promo.code}</span>
+                            <div className="flex items-center gap-2 text-xs text-gray-400 my-4 bg-gray-50 p-2 rounded">
+                                <Calendar size={14}/><span>{promo.start_date}</span> - <span>{promo.end_date}</span>
+                            </div>
+                            <div className="pt-4 border-t border-gray-100 flex justify-between items-center mt-auto">
+                                <div className="text-sm font-bold text-blue-600">{promo.type === 'fixed' ? `Rp ${parseInt(promo.discount_amount).toLocaleString()}` : `${promo.discount_amount}% OFF`}</div>
+                                <div className="flex gap-2">
+                                    <Link href={`/admin/promos/${promo.id}`} className="p-2 text-gray-400 hover:text-blue-600 bg-gray-50 rounded-lg"><Edit size={18}/></Link>
+                                    <button onClick={() => handleDelete(promo.id)} className="p-2 text-gray-400 hover:text-red-600 bg-gray-50 rounded-lg"><Trash2 size={18}/></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div><label className="block text-sm font-bold mb-1">Type</label><select className="w-full border rounded-lg p-2.5 bg-white" value={type} onChange={e=>setType(e.target.value)}><option value="percent">Percent</option><option value="fixed">Fixed</option></select></div>
-                <div><label className="block text-sm font-bold mb-1">Value</label><input required type="number" className="w-full border rounded-lg p-2.5" value={discountAmount} onChange={e=>setDiscountAmount(e.target.value)} /></div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div><label className="block text-sm font-bold mb-1">Start</label><input required type="date" className="w-full border rounded-lg p-2.5" value={startDate} onChange={e=>setStartDate(e.target.value)} /></div>
-                <div><label className="block text-sm font-bold mb-1">End</label><input required type="date" className="w-full border rounded-lg p-2.5" value={endDate} onChange={e=>setEndDate(e.target.value)} /></div>
-            </div>
-            <div><label className="block text-sm font-bold mb-1">Desc</label><textarea className="w-full border rounded-lg p-2.5" rows={3} value={description} onChange={e=>setDescription(e.target.value)}></textarea></div>
-            <div><label className="block text-sm font-bold mb-1">Image</label><input type="file" accept="image/*" className="w-full text-sm" onChange={e => setImage(e.target.files?.[0] || null)} /></div>
-            
-            <button type="submit" disabled={submitting} className="w-full bg-navy-900 text-white font-bold py-3 rounded-xl hover:bg-gold-500 transition flex justify-center gap-2">
-                {submitting ? <Loader2 className="animate-spin"/> : <><Save size={20}/> Create Promo</>}
-            </button>
-          </form>
+          )}
+          {!loading && promos.length === 0 && <div className="text-center py-20 text-gray-400">No promos found.</div>}
       </div>
-    </div>
+    </main>
   );
 }
