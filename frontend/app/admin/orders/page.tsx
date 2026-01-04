@@ -2,44 +2,42 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from "next/link";
-import { Eye, Search, Loader2, RefreshCw } from "lucide-react";
-import { useRouter } from "next/navigation"; // ✅ Tambah ini buat redirect kalau token basi
+import { Eye, Search, Loader2, RefreshCw, Trash2, CheckCircle, XCircle, Clock } from "lucide-react";
+import { useRouter } from "next/navigation"; 
 
-// Gunakan URL Railway langsung biar pasti
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
 
 export default function AdminOrdersPage() {
-  const router = useRouter(); // ✅ Init Router
+  const router = useRouter(); 
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // 🔥 1. STATE UNTUK TAB (Default: 'active')
+  const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'cancelled'>('active');
 
   const fetchOrders = async () => {
     setLoading(true);
     
-    // ✅ 1. Ambil Token
     const token = localStorage.getItem('token');
     if (!token) {
-        router.push('/admin/login'); // Tendang kalau gak ada token
+        router.push('/admin/login'); 
         return;
     }
 
     try {
-      // ✅ 2. Fetch dengan Header Authorization
       const res = await fetch(`${BACKEND_URL}/api/admin/orders`, {
          headers: {
             'Accept': 'application/json',
-            'Authorization': `Bearer ${token}` // <--- INI KUNCINYA
+            'Authorization': `Bearer ${token}` 
          }
       });
 
       const json = await res.json();
       
       if (res.ok) {
-        // Sesuaikan kalau response backend dibungkus 'data' atau langsung array
         setOrders(json.data || json); 
       } else {
-        // Kalau 401 (Token Expired), suruh login lagi
         if (res.status === 401) {
             localStorage.removeItem('token');
             router.push('/admin/login');
@@ -58,11 +56,53 @@ export default function AdminOrdersPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Filter Search
-  const filteredOrders = orders.filter(o => 
-    o.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    o.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // 🔥 2. LOGIKA DELETE ORDER
+  const handleDelete = async (id: number) => {
+    if (!confirm("Yakin ingin menghapus order ini? Data yang dihapus tidak bisa dikembalikan.")) return;
+
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/orders/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        if (res.ok) {
+            // Update state lokal biar gak perlu fetch ulang (lebih cepat)
+            setOrders(prev => prev.filter(o => o.id !== id));
+            alert("Order berhasil dihapus.");
+        } else {
+            alert("Gagal menghapus order.");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Terjadi kesalahan koneksi.");
+    }
+  };
+
+  // 🔥 3. LOGIKA FILTER TAB & SEARCH
+  const filteredOrders = orders.filter(o => {
+    // A. Filter Search
+    const matchesSearch = 
+        o.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        o.customer_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // B. Filter Tab
+    let matchesTab = false;
+    if (activeTab === 'active') {
+        // Active = Status selain completed & cancelled
+        matchesTab = ['pending', 'confirmed', 'processing', 'ready'].includes(o.status);
+    } else if (activeTab === 'completed') {
+        matchesTab = o.status === 'completed';
+    } else if (activeTab === 'cancelled') {
+        matchesTab = o.status === 'cancelled';
+    }
+
+    return matchesSearch && matchesTab;
+  });
 
   const getStatusBadge = (status: string) => {
     const styles: any = {
@@ -86,6 +126,37 @@ export default function AdminOrdersPage() {
         </div>
         <button onClick={fetchOrders} className="bg-white text-navy-900 px-4 py-2 rounded-lg shadow-sm border border-gray-200 flex items-center gap-2 hover:bg-gray-50">
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh
+        </button>
+      </div>
+
+      {/* 🔥 TAB NAVIGATION (Custom Tab) */}
+      <div className="flex gap-4 mb-6 border-b border-gray-200">
+        <button 
+            onClick={() => setActiveTab('active')}
+            className={`pb-3 px-2 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'active' ? 'border-navy-900 text-navy-900' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+        >
+            <Clock size={16} /> Active Tasks
+            <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full ml-1">
+                {orders.filter(o => ['pending', 'confirmed', 'processing', 'ready'].includes(o.status)).length}
+            </span>
+        </button>
+        <button 
+            onClick={() => setActiveTab('completed')}
+            className={`pb-3 px-2 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'completed' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+        >
+            <CheckCircle size={16} /> Completed
+            <span className="bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full ml-1">
+                {orders.filter(o => o.status === 'completed').length}
+            </span>
+        </button>
+        <button 
+            onClick={() => setActiveTab('cancelled')}
+            className={`pb-3 px-2 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'cancelled' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+        >
+            <XCircle size={16} /> Cancelled
+            <span className="bg-red-50 text-red-600 text-[10px] px-2 py-0.5 rounded-full ml-1">
+                {orders.filter(o => o.status === 'cancelled').length}
+            </span>
         </button>
       </div>
 
@@ -119,6 +190,8 @@ export default function AdminOrdersPage() {
                 <tbody className="divide-y divide-gray-100">
                     {loading && orders.length === 0 ? (
                         <tr><td colSpan={7} className="text-center py-10"><Loader2 className="animate-spin mx-auto text-navy-900"/></td></tr>
+                    ) : filteredOrders.length === 0 ? (
+                         <tr><td colSpan={7} className="p-10 text-center text-gray-400">No data in this tab.</td></tr>
                     ) : filteredOrders.map((order) => (
                         <tr key={order.id} className="hover:bg-gray-50 transition">
                             <td className="px-6 py-4 font-bold text-blue-600">{order.order_number}</td>
@@ -143,17 +216,25 @@ export default function AdminOrdersPage() {
                                 Rp {parseInt(order.total_price).toLocaleString()}
                             </td>
                             <td className="px-6 py-4 text-center">
-                                <Link href={`/admin/orders/${order.id}`} className="inline-flex items-center justify-center w-8 h-8 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition">
-                                    <Eye size={16} />
-                                </Link>
+                                <div className="flex items-center justify-center gap-2">
+                                    {/* View Button */}
+                                    <Link href={`/admin/orders/${order.id}`} className="inline-flex items-center justify-center w-8 h-8 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition">
+                                        <Eye size={16} />
+                                    </Link>
+                                    
+                                    {/* 🔥 Delete Button */}
+                                    <button 
+                                        onClick={() => handleDelete(order.id)}
+                                        className="inline-flex items-center justify-center w-8 h-8 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     ))}
                 </tbody>
             </table>
-            {!loading && filteredOrders.length === 0 && (
-                <div className="p-10 text-center text-gray-400">No orders found.</div>
-            )}
         </div>
       </div>
     </div>

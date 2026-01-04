@@ -2,15 +2,20 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Lock, Loader2, AlertCircle } from "lucide-react"; // Tambah icon loader & alert
+import { ArrowLeft, User, Lock, Loader2, AlertCircle } from "lucide-react"; 
 import { useTransition } from "@/app/context/TransitionContext";
-import { useState } from "react"; // 1. Import useState
+import { useState } from "react"; 
+
+// 🔥 PENTING: Pakai URL Localhost dulu karena Backend baru ada di laptop
+const BACKEND_URL = "https://getcha2-backend-production.up.railway.app"; 
+// Nanti kalau sudah fix semua dan di-push ke Railway, baru ganti jadi:
+// const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
 
 export default function LoginPage() {
   const router = useRouter();
   const { triggerTransition } = useTransition();
 
-  // 2. State untuk data form & loading
+  // State
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,11 +27,16 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // 3. Panggil API Backend (Sesuaikan URL dengan Laravel kamu)
-      const res = await fetch("https://getcha2-backend-production.up.railway.app/api/login", {
+      // Panggil API ke Localhost
+      const res = await fetch(`${BACKEND_URL}/api/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }), // Kirim data
+        headers: { 
+            "Content-Type": "application/json",
+            "Accept": "application/json" // Tambahkan ini biar errornya JSON
+        },
+        // Kita kirim sebagai 'username', tapi backend kita sudah pintar
+        // Dia akan otomatis cek apakah isinya Email atau Username
+        body: JSON.stringify({ username, password }), 
       });
 
       const data = await res.json();
@@ -35,15 +45,16 @@ export default function LoginPage() {
         throw new Error(data.message || "Login failed");
       }
 
-      // 4. Simpan Token (PENTING BIAR USER DIANGGAP SUDAH LOGIN)
+      // Simpan Token & User Data
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // 5. Pindah halaman
+      // Redirect sukses
       triggerTransition("/dashboard"); 
 
     } catch (err: any) {
-      setError(err.message || "Something went wrong");
+      console.error("Login Error:", err);
+      setError(err.message || "Gagal terhubung ke server");
     } finally {
       setLoading(false);
     }
@@ -52,11 +63,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-900 to-navy-950 px-4 relative overflow-hidden">
       
-      {/* Background decoration tetep sama... */}
+      {/* Background decoration */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-gold-500 rounded-full blur-[150px] opacity-20 -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-600 rounded-full blur-[150px] opacity-20 translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
 
-      {/* Tombol Kembali tetep sama... */}
+      {/* Tombol Kembali */}
       <div className="absolute top-8 left-6 md:left-12 z-20">
         <Link href="/" className="group flex items-center gap-3 text-gray-400 hover:text-white transition-all duration-300">
           <div className="p-2 bg-white/10 backdrop-blur-md rounded-full group-hover:bg-gold-500 group-hover:text-navy-900 transition-colors border border-white/10">
@@ -80,8 +91,8 @@ export default function LoginPage() {
 
         {/* ERROR MESSAGE ALERT */}
         {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm flex items-center gap-2">
-                <AlertCircle size={16} /> {error}
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm flex items-center gap-2 animate-in slide-in-from-top-2">
+                <AlertCircle size={16} className="shrink-0"/> {error}
             </div>
         )}
 
@@ -98,9 +109,9 @@ export default function LoginPage() {
                     <input 
                         required 
                         type="text" 
-                        placeholder="Enter your username" 
-                        value={username} // Bind value
-                        onChange={(e) => setUsername(e.target.value)} // Update state
+                        placeholder="Enter username or email" 
+                        value={username} 
+                        onChange={(e) => setUsername(e.target.value)} 
                         className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-navy-900 rounded-xl focus:outline-none focus:border-gold-500 focus:ring-4 focus:ring-gold-500/10 transition-all font-medium placeholder:text-gray-400"
                     />
                 </div>
@@ -120,8 +131,8 @@ export default function LoginPage() {
                         required 
                         type="password" 
                         placeholder="••••••••" 
-                        value={password} // Bind value
-                        onChange={(e) => setPassword(e.target.value)} // Update state
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
                         className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-navy-900 rounded-xl focus:outline-none focus:border-gold-500 focus:ring-4 focus:ring-gold-500/10 transition-all font-medium placeholder:text-gray-400"
                     />
                 </div>
@@ -130,7 +141,7 @@ export default function LoginPage() {
             {/* Submit Button */}
             <button 
                 type="submit" 
-                disabled={loading} // Disable saat loading
+                disabled={loading} 
                 className="w-full bg-navy-900 text-white font-bold py-4 rounded-xl hover:bg-gold-500 hover:text-navy-900 transition-all duration-300 shadow-lg shadow-navy-900/20 active:scale-[0.98] mt-4 flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 {loading ? (

@@ -4,7 +4,7 @@ import NavbarDashboard from "@/app/components/layout/NavbarDashboard";
 import { useRouter } from 'next/navigation';
 import { 
     User, ChevronRight, LogOut, CreditCard, ReceiptText, 
-    Star, Settings, Gift, Camera, ShoppingBag, Heart 
+    Star, Settings, Gift, Camera, ShoppingBag, Heart, AlertTriangle 
 } from 'lucide-react';
 import { useTransition } from "@/app/context/TransitionContext";
 
@@ -12,7 +12,10 @@ export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [activeOrdersCount, setActiveOrdersCount] = useState(0);
-  const [totalSpent, setTotalSpent] = useState(0); // Tambahan: Total pengeluaran
+  const [totalSpent, setTotalSpent] = useState(0);
+  
+  // State untuk Modal Logout
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const { setIsLoading } = useTransition();
 
@@ -55,7 +58,7 @@ export default function ProfilePage() {
                 const active = jsonOrder.data.filter((o: any) => !['completed', 'cancelled'].includes(o.status)).length;
                 setActiveOrdersCount(active);
 
-                // Hitung Total Spent (Iseng-iseng buat stats)
+                // Hitung Total Spent
                 const spent = jsonOrder.data
                     .filter((o: any) => o.status === 'completed')
                     .reduce((acc: number, curr: any) => acc + parseInt(curr.total_price), 0);
@@ -79,11 +82,15 @@ export default function ProfilePage() {
     }, 800);
   };
 
-  // 3. LOGOUT
+  // 3. LOGOUT CONFIRMATION (Munculkan Modal)
+  const confirmLogout = () => {
+      setShowLogoutModal(true);
+  };
+
+  // 4. LOGOUT ACTION (Eksekusi Logout)
   const handleLogout = async () => {
-    if (!confirm("Are you sure you want to log out?")) return;
-    
-    setIsLoading(true);
+    setShowLogoutModal(false); // Tutup modal dulu
+    setIsLoading(true); // Tampilkan transisi loading
 
     try {
         const token = localStorage.getItem("token");
@@ -154,7 +161,7 @@ export default function ProfilePage() {
             <button className="text-sm font-bold text-gold-600 hover:text-gold-700">Edit</button>
         </div>
 
-        {/* 1. MEMBER CARD (UPGRADED) */}
+        {/* 1. MEMBER CARD */}
         <div className="bg-navy-900 rounded-[2rem] p-6 text-white shadow-xl shadow-navy-900/20 mb-8 relative overflow-hidden group transition-all hover:scale-[1.02] duration-500">
             {/* Background Decoration */}
             <div className="absolute top-0 right-0 w-48 h-48 bg-gold-500 rounded-full blur-[80px] opacity-20 translate-x-10 -translate-y-10 group-hover:opacity-30 transition-opacity duration-700"></div>
@@ -198,15 +205,14 @@ export default function ProfilePage() {
                     </div>
                 </div>
                 
-                {/* Progress Bar Dummy */}
                 <div className="w-full bg-white/10 h-1.5 rounded-full mt-3 overflow-hidden">
                     <div className="bg-gold-500 h-full w-[45%] rounded-full shadow-[0_0_10px_rgba(234,179,8,0.5)]"></div>
                 </div>
-                <p className="text-[10px] text-white/40 mt-2 text-right">450 points to Gold</p>
+                <p className="text[10px] text-white/40 mt-2 text-right">450 points to Gold</p>
             </div>
         </div>
 
-        {/* 2. QUICK STATS (NEW) */}
+        {/* 2. QUICK STATS */}
         <div className="grid grid-cols-2 gap-4 mb-8">
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
                  <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
@@ -254,9 +260,9 @@ export default function ProfilePage() {
             ))}
         </div>
 
-        {/* 4. LOGOUT */}
+        {/* 4. LOGOUT BUTTON */}
         <button 
-            onClick={handleLogout}
+            onClick={confirmLogout} // Panggil modal
             className="w-full py-4 rounded-2xl border-2 border-red-50 text-red-500 font-bold flex items-center justify-center gap-2 hover:bg-red-50 hover:border-red-100 transition-all active:scale-[0.98]"
         >
             <LogOut size={20} /> Log Out
@@ -266,6 +272,49 @@ export default function ProfilePage() {
             GetCha App v1.2.0 • Build 2024
         </p>
       </div>
+
+      {/* --- CUSTOM LOGOUT MODAL --- */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          {/* Backdrop Blur */}
+          <div 
+            className="absolute inset-0 bg-navy-900/40 backdrop-blur-sm animate-in fade-in duration-300"
+            onClick={() => setShowLogoutModal(false)}
+          ></div>
+          
+          {/* Modal Content */}
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative z-10 animate-in zoom-in-95 duration-300 border border-gray-100">
+            <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center animate-pulse">
+                    <AlertTriangle size={40} className="text-red-500" />
+                </div>
+            </div>
+            
+            <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-navy-900 mb-2">Log Out?</h3>
+                <p className="text-gray-500 text-sm">
+                    Are you sure you want to log out? <br/> You'll need to login again to access your account.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+                <button 
+                    onClick={() => setShowLogoutModal(false)}
+                    className="py-3 px-6 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                    Cancel
+                </button>
+                <button 
+                    onClick={handleLogout}
+                    className="py-3 px-6 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-200 transition-all hover:scale-[1.02]"
+                >
+                    Yes, Logout
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
