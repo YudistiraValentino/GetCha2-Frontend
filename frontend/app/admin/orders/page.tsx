@@ -3,22 +3,47 @@
 import React, { useEffect, useState } from 'react';
 import Link from "next/link";
 import { Eye, Search, Loader2, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation"; // ✅ Tambah ini buat redirect kalau token basi
 
-// Ganti baris 7 jadi begini:
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+// Gunakan URL Railway langsung biar pasti
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
 
 export default function AdminOrdersPage() {
+  const router = useRouter(); // ✅ Init Router
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   const fetchOrders = async () => {
     setLoading(true);
+    
+    // ✅ 1. Ambil Token
+    const token = localStorage.getItem('token');
+    if (!token) {
+        router.push('/admin/login'); // Tendang kalau gak ada token
+        return;
+    }
+
     try {
-      const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/orders`);
+      // ✅ 2. Fetch dengan Header Authorization
+      const res = await fetch(`${BACKEND_URL}/api/admin/orders`, {
+         headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}` // <--- INI KUNCINYA
+         }
+      });
+
       const json = await res.json();
-      if (json.success) {
-        setOrders(json.data);
+      
+      if (res.ok) {
+        // Sesuaikan kalau response backend dibungkus 'data' atau langsung array
+        setOrders(json.data || json); 
+      } else {
+        // Kalau 401 (Token Expired), suruh login lagi
+        if (res.status === 401) {
+            localStorage.removeItem('token');
+            router.push('/admin/login');
+        }
       }
     } catch (error) {
       console.error("Gagal fetch:", error);
@@ -29,15 +54,14 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     fetchOrders();
-    // Opsional: Pasang interval polling setiap 30 detik biar data selalu fresh
     const interval = setInterval(fetchOrders, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Filter Search (Order ID atau Nama Customer)
+  // Filter Search
   const filteredOrders = orders.filter(o => 
-    o.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    o.customer_name.toLowerCase().includes(searchTerm.toLowerCase())
+    o.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    o.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {

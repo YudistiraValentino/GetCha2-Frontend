@@ -4,20 +4,28 @@ import React, { useEffect, useState } from 'react';
 import Link from "next/link";
 import { Edit, Trash2, Plus, Ticket, Calendar, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation"; // ✅ Tambah
 
-// Konfigurasi URL Backend Railway
 const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
 
 export default function AdminPromosPage() {
+  const router = useRouter(); // ✅ Init Router
   const [promos, setPromos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // 1. FETCH DATA
   const fetchPromos = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) { router.push('/admin/login'); return; }
+
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/promos`);
+      const res = await fetch(`${BACKEND_URL}/api/admin/promos`, {
+        headers: { 'Authorization': `Bearer ${token}` } // ✅ Tambah Header
+      });
       const json = await res.json();
-      if (json.success) setPromos(json.data);
+      if (res.ok) {
+          setPromos(json.data || []);
+      }
     } catch (error) {
       console.error("Gagal fetch promos:", error);
     } finally {
@@ -29,9 +37,14 @@ export default function AdminPromosPage() {
 
   // 2. DELETE FUNCTION
   const handleDelete = async (id: number) => {
+    const token = localStorage.getItem('token');
     if (!confirm("Hapus promo ini?")) return;
+    
     try {
-        const res = await fetch(`${BACKEND_URL}/api/admin/promos/${id}`, { method: "DELETE" });
+        const res = await fetch(`${BACKEND_URL}/api/admin/promos/${id}`, { 
+            method: "DELETE",
+            headers: { 'Authorization': `Bearer ${token}` } // ✅ Tambah Header
+        });
         if (res.ok) {
             alert("Promo berhasil dihapus!");
             fetchPromos();
@@ -41,33 +54,18 @@ export default function AdminPromosPage() {
     }
   };
 
-  // 3. HELPER GAMBAR (SINKRON DENGAN RAILWAY)
+  // 3. HELPER GAMBAR
   const getImageUrl = (path: string) => {
-  if (!path) return "/Image/placeholder.png";
-  if (path.startsWith("http")) return path;
-
-  const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
-  
-  // 1. Bersihkan path dari string 'public/' jika terbawa dari database
-  let cleanPath = path.replace('public/', '');
-
-  // 2. Pastikan diawali dengan satu garis miring
-  if (!cleanPath.startsWith('/')) {
-    cleanPath = '/' + cleanPath;
-  }
-
-  // 3. JANGAN tambahkan /storage jika path sudah diawali /images atau /maps
-  // Karena data kamu di DB sekarang adalah /images/namafile.png
-  if (
-    !cleanPath.startsWith('/storage') && 
-    !cleanPath.startsWith('/images') && 
-    !cleanPath.startsWith('/maps')
-  ) {
-    cleanPath = '/storage' + cleanPath;
-  }
-
-  return `${BACKEND_URL}${cleanPath}`;
-};
+    if (!path) return "/Image/placeholder.png";
+    if (path.startsWith("http")) return path;
+    const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
+    let cleanPath = path.replace('public/', '');
+    if (!cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
+    if (!cleanPath.startsWith('/storage') && !cleanPath.startsWith('/images') && !cleanPath.startsWith('/maps')) {
+        cleanPath = '/storage' + cleanPath;
+    }
+    return `${BACKEND_URL}${cleanPath}`;
+  };
 
   if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-navy-900" size={40}/></div>;
 
@@ -88,7 +86,6 @@ export default function AdminPromosPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {promos.map((promo) => (
             <div key={promo.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group hover:shadow-md transition">
-                {/* Image Cover */}
                 <div className="h-40 bg-gray-100 relative overflow-hidden">
                     {promo.image ? (
                         <Image 
@@ -110,7 +107,6 @@ export default function AdminPromosPage() {
                     </div>
                 </div>
 
-                {/* Content */}
                 <div className="p-5 flex-1 flex flex-col">
                     <div className="flex justify-between items-start mb-2">
                         <h3 className="font-bold text-lg text-navy-900 line-clamp-1">{promo.title}</h3>

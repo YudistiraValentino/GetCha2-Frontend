@@ -2,16 +2,16 @@
 
 import React, { useEffect, useState } from 'react';
 import { Search, Loader2, User, Star, ShoppingBag, Gift, X, Save } from "lucide-react";
+import { useRouter } from "next/navigation"; // ✅ Tambah
 
-// Ganti baris 7 jadi begini:
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
 
 export default function AdminUsersPage() {
+  const router = useRouter(); // ✅ Init
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // State Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
@@ -21,10 +21,15 @@ export default function AdminUsersPage() {
 
   // 1. FETCH USERS
   const fetchUsers = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) { router.push('/admin/login'); return; }
+
     try {
-      const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/users`);
+      const res = await fetch(`${BACKEND_URL}/api/admin/users`, {
+         headers: { 'Authorization': `Bearer ${token}` } // ✅ Header
+      });
       const json = await res.json();
-      if (json.success) setUsers(json.data);
+      if (res.ok) setUsers(json.data || []);
     } catch (error) {
       console.error(error);
     } finally {
@@ -36,6 +41,7 @@ export default function AdminUsersPage() {
 
   // 2. OPEN MODAL & FETCH STATS
   const handleViewUser = async (user: any) => {
+    const token = localStorage.getItem('token');
     setSelectedUser(user);
     setPointsInput(user.points);
     setIsModalOpen(true);
@@ -43,7 +49,9 @@ export default function AdminUsersPage() {
     setStats(null);
 
     try {
-        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/users/${user.id}/stats`);
+        const res = await fetch(`${BACKEND_URL}/api/admin/users/${user.id}/stats`, {
+            headers: { 'Authorization': `Bearer ${token}` } // ✅ Header
+        });
         const json = await res.json();
         if (json.success) {
             setStats(json.data.stats);
@@ -59,19 +67,22 @@ export default function AdminUsersPage() {
   const handleUpdatePoints = async (e: React.FormEvent) => {
     e.preventDefault();
     if(!selectedUser) return;
+    const token = localStorage.getItem('token');
     setUpdatingPoints(true);
 
     try {
-        const res = await fetch(`https://getcha2-backend-production.up.railway.app/api/admin/users/${selectedUser.id}/points`, {
+        const res = await fetch(`${BACKEND_URL}/api/admin/users/${selectedUser.id}/points`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` // ✅ Header
+            },
             body: JSON.stringify({ points: parseInt(pointsInput) })
         });
         const json = await res.json();
         
         if (json.success) {
             alert("Poin berhasil diupdate!");
-            // Update data di tabel lokal tanpa refresh
             setUsers(users.map(u => u.id === selectedUser.id ? { ...u, points: parseInt(pointsInput) } : u));
             setIsModalOpen(false);
         } else {
@@ -84,10 +95,9 @@ export default function AdminUsersPage() {
     }
   };
 
-  // Filter Search
   const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-navy-900"/></div>;
@@ -158,7 +168,6 @@ export default function AdminUsersPage() {
       {isModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100">
-                {/* Modal Header */}
                 <div className="bg-navy-900 p-4 flex justify-between items-center text-white">
                     <h3 className="font-bold flex items-center gap-2">
                         <User size={20} className="text-gold-500" /> {selectedUser.name}
@@ -167,7 +176,6 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div className="p-6">
-                    {/* User Stats Grid */}
                     <div className="grid grid-cols-2 gap-4 mb-6">
                         <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-center">
                             <p className="text-xs text-blue-500 font-bold uppercase mb-1 flex justify-center gap-1"><ShoppingBag size={12}/> Total Orders</p>
@@ -188,7 +196,6 @@ export default function AdminUsersPage() {
 
                     <hr className="border-gray-100 mb-6"/>
 
-                    {/* Update Points Form */}
                     <form onSubmit={handleUpdatePoints}>
                         <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
                             <Star size={16} className="text-gold-500" fill="currentColor"/> Set Loyalty Points
