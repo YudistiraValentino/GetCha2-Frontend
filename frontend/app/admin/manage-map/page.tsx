@@ -5,12 +5,14 @@ import NavbarDashboard from "@/app/components/layout/NavbarDashboard";
 import { Upload, Save, AlertCircle, CheckCircle, Info, FileUp, Loader2 } from 'lucide-react';
 import { useRouter } from "next/navigation";
 
-// ✅ CONFIG
+// ✅ CONFIG: Pastikan HTTPS!
+// Jangan pakai http://... kalau di Railway.
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
 
 export default function AdminMapManager() {
   const router = useRouter();
   
+  // State Data
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [detectedSeats, setDetectedSeats] = useState<string[]>([]);
@@ -57,7 +59,7 @@ export default function AdminMapManager() {
   const onDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
   const onDrop = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); if(e.dataTransfer.files?.[0]) processFile(e.dataTransfer.files[0]); };
 
-  // 🔥 LOGIC UPLOAD (SUPER STRICT URL TOKEN)
+  // 🔥 LOGIC UPLOAD (MANUAL STRING CONCATENATION)
   const handleSave = async () => {
     if (!selectedFile) return alert("Pilih file dulu!");
     
@@ -75,18 +77,19 @@ export default function AdminMapManager() {
     formData.append("image", selectedFile);
     formData.append("is_active", "1");
 
+    // 🔥 KITA RAKIT URL SECARA MANUAL STRING
+    // Pastikan tidak ada karakter aneh.
+    // encodeURIComponent penting kalau token ada karakter spesial.
+    const finalUrl = `${BACKEND_URL}/api/admin/maps?token=${encodeURIComponent(token)}`;
+
+    console.log("🚀 DEBUG UPLOAD URL:", finalUrl); // Cek Console (F12)
+
     try {
-        // 🔥 KITA RAKIT URL MANUAL STRING (Bukan Object URL)
-        // Ini memastikan formatnya: .../maps?token=eyJh...
-        const urlTarget = `${BACKEND_URL}/api/admin/maps?token=${encodeURIComponent(token)}`;
-
-        console.log("🚀 Uploading to:", urlTarget);
-
-        const res = await fetch(urlTarget, {
+        const res = await fetch(finalUrl, {
             method: "POST",
             headers: {
                 'Accept': 'application/json',
-                // Header Authorization DIHAPUS TOTAL. Kita andalkan URL.
+                // Header Authorization DIHAPUS TOTAL. Kita murni pakai URL.
             },
             body: formData
         });
@@ -97,16 +100,24 @@ export default function AdminMapManager() {
             alert("✅ Map Berhasil Diupload!");
             window.location.reload();
         } else {
-            console.error("Server Response:", data);
+            console.error("Upload Error Response:", data);
             
-            // Tampilkan pesan detail dari debug info backend
-            const detail = data.debug_info ? JSON.stringify(data.debug_info) : "";
-            alert(`Gagal: ${data.message}\nDebug: ${detail}`);
-            
-            if(res.status === 401) router.push('/admin/login');
+            // Tampilkan info debug dari backend jika ada
+            let debugMsg = "";
+            if (data.debug_info) {
+                debugMsg = `\nDebug Info: GET=${JSON.stringify(data.debug_info.php_get)}`;
+            }
+
+            if(res.status === 401) {
+                alert(`Gagal 401: Token Ditolak.${debugMsg}`);
+                // Jangan logout dulu biar bisa debug
+            } else {
+                alert(`Gagal Upload: ${data.message || "Error server"}`);
+            }
         }
     } catch (error) {
-        alert("Gagal koneksi ke server.");
+        console.error(error);
+        alert("Gagal koneksi ke server (Network Error). Cek Console.");
     } finally {
         setLoading(false);
     }
