@@ -9,11 +9,8 @@ import {
     Edit, 
     Trash2, 
     Loader2, 
-    Filter, 
-    MoreHorizontal, 
     Sparkles 
 } from "lucide-react";
-import NavbarDashboard from '@/app/components/layout/NavbarDashboard'; // Optional jika admin punya layout sendiri
 
 // ✅ CONFIG
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://getcha2-backend-production.up.railway.app";
@@ -36,15 +33,17 @@ export default function AdminProductsPage() {
 
     // 1. FETCH DATA
     const fetchProducts = async () => {
+        setLoading(true);
         try {
+            // Kita pakai endpoint /api/menu karena biasanya lebih lengkap datanya
             const res = await fetch(`${BACKEND_URL}/api/menu`); 
             const json = await res.json();
             
             if (json.success) {
-                // FIX DISINI: Map data agar category_name terbaca
                 const cleanData = json.data.map((item: any) => ({
                     ...item,
-                    category_name: item.category ? item.category.name : (item.category_name || "Uncategorized")
+                    // Pastikan nama kategori terbaca dari relasi backend
+                    category_name: item.category ? item.category.name : "Uncategorized"
                 }));
                 setProducts(cleanData);
             }
@@ -61,10 +60,9 @@ export default function AdminProductsPage() {
 
     // 2. DELETE PRODUCT
     const handleDelete = async (id: number) => {
-        if (!confirm("Are you sure you want to delete this product? This action cannot be undone.")) return;
+        if (!confirm("Are you sure?")) return;
 
         try {
-            // Pastikan kamu punya endpoint DELETE di backend (biasanya /api/admin/products/{id})
             const res = await fetch(`${BACKEND_URL}/api/admin/products/${id}`, {
                 method: "DELETE",
                 headers: {
@@ -73,28 +71,27 @@ export default function AdminProductsPage() {
             });
 
             if (res.ok) {
-                alert("Product deleted successfully.");
-                fetchProducts(); // Refresh list
+                alert("Product deleted!");
+                fetchProducts();
             } else {
-                const data = await res.json();
-                alert("Failed to delete: " + (data.message || "Unknown error"));
+                alert("Failed to delete.");
             }
         } catch (error) {
-            console.error(error);
             alert("Error deleting product.");
         }
     };
 
-    // 3. HELPER URL GAMBAR
+    // 3. HELPER URL GAMBAR (VERSI FIX)
+    // Karena gambar ada di folder public Next.js, kita tidak panggil BACKEND_URL
     const getImageUrl = (path: string) => {
-        if (!path) return "/Image/placeholder.png";
+        if (!path) return "/images/products/food.jpg"; // Fallback
+        
+        // Jika path sudah berupa URL internet (http...), biarkan
         if (path.startsWith("http")) return path;
-        let cleanPath = path.replace('public/', '');
-        if (!cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
-        if (!cleanPath.startsWith('/storage') && !cleanPath.startsWith('/images')) {
-            cleanPath = '/storage' + cleanPath;
-        }
-        return `${BACKEND_URL}${cleanPath}`;
+
+        // Jika path dari DB adalah "/images/products/coffee.jpg", 
+        // Next.js akan otomatis mencarinya di folder public.
+        return path; 
     };
 
     // 4. FILTERING LOGIC
@@ -107,17 +104,14 @@ export default function AdminProductsPage() {
     const categories = ["All", ...Array.from(new Set(products.map(p => p.category_name)))];
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            {/* Optional Navbar Admin */}
-            {/* <AdminNavbar /> */}
-            
-            <div className="container mx-auto px-6 py-10 max-w-7xl">
+        <div className="min-h-screen bg-gray-50 pb-20 px-4 pt-10">
+            <div className="container mx-auto max-w-7xl">
                 
-                {/* HEADER SECTION */}
+                {/* HEADER */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-navy-900">Products</h1>
-                        <p className="text-gray-500 text-sm">Manage your cafe menu items here.</p>
+                        <h1 className="text-3xl font-bold text-navy-900">Products Management</h1>
+                        <p className="text-gray-500 text-sm">Images are loaded from Next.js public folder.</p>
                     </div>
                     <Link href="/admin/products/create">
                         <button className="bg-navy-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-gold-500 hover:text-navy-900 transition-all shadow-lg">
@@ -128,21 +122,18 @@ export default function AdminProductsPage() {
 
                 {/* FILTERS & SEARCH */}
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
-                    
-                    {/* Category Tabs */}
                     <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto no-scrollbar">
                         {categories.map(cat => (
                             <button 
                                 key={cat}
                                 onClick={() => setSelectedCategory(cat)}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${selectedCategory === cat ? "bg-navy-50 text-navy-900 border border-navy-200" : "text-gray-500 hover:bg-gray-50"}`}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${selectedCategory === cat ? "bg-navy-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
                             >
                                 {cat}
                             </button>
                         ))}
                     </div>
 
-                    {/* Search Bar */}
                     <div className="relative w-full md:w-80">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input 
@@ -150,7 +141,7 @@ export default function AdminProductsPage() {
                             placeholder="Search products..." 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-navy-900 transition-all"
+                            className="w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-navy-900"
                         />
                     </div>
                 </div>
@@ -167,69 +158,58 @@ export default function AdminProductsPage() {
                             <table className="w-full text-left border-collapse">
                                 <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold tracking-wider">
                                     <tr>
-                                        <th className="p-6">Product Info</th>
+                                        <th className="p-6">Product</th>
                                         <th className="p-6">Category</th>
                                         <th className="p-6">Price</th>
-                                        <th className="p-6 text-center">Status</th>
+                                        <th className="p-6 text-center">Promo</th>
                                         <th className="p-6 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {filteredProducts.map((product) => (
-                                        <tr key={product.id} className="hover:bg-gray-50 transition-colors group">
-                                            {/* Product Info */}
+                                        <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="p-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-16 h-16 bg-gray-100 rounded-lg relative overflow-hidden border border-gray-200 shrink-0">
+                                                    <div className="w-14 h-14 bg-gray-100 rounded-lg relative overflow-hidden border border-gray-200 shrink-0">
                                                         <Image 
                                                             src={getImageUrl(product.image)} 
                                                             alt={product.name} 
                                                             fill 
                                                             className="object-cover"
+                                                            unoptimized // Penting agar Next.js tidak pusing mencari loader
                                                         />
                                                     </div>
                                                     <div>
-                                                        <h3 className="font-bold text-navy-900 text-sm md:text-base">{product.name}</h3>
+                                                        <h3 className="font-bold text-navy-900">{product.name}</h3>
                                                         <span className="text-xs text-gray-400">ID: #{product.id}</span>
                                                     </div>
                                                 </div>
                                             </td>
-
-                                            {/* Category */}
                                             <td className="p-6">
                                                 <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold border border-blue-100">
                                                     {product.category_name}
                                                 </span>
                                             </td>
-
-                                            {/* Price */}
                                             <td className="p-6 font-mono font-medium text-navy-900">
                                                 Rp {parseFloat(product.price).toLocaleString("id-ID")}
                                             </td>
-
-                                            {/* Status (Promo Badge) */}
                                             <td className="p-6 text-center">
                                                 {product.is_promo === 1 ? (
-                                                    <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-1 rounded-md text-xs font-bold border border-yellow-200">
-                                                        <Sparkles size={10} /> PROMO
+                                                    <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-md text-xs font-bold border border-yellow-200 inline-flex items-center gap-1">
+                                                        <Sparkles size={10} /> YES
                                                     </span>
-                                                ) : (
-                                                    <span className="text-gray-300 text-xs font-bold">-</span>
-                                                )}
+                                                ) : <span className="text-gray-300">-</span>}
                                             </td>
-
-                                            {/* Actions */}
                                             <td className="p-6 text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <Link href={`/admin/products/${product.id}`}>
-                                                        <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                                                    <Link href={`/admin/products/${product.id}/edit`}>
+                                                        <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
                                                             <Edit size={18} />
                                                         </button>
                                                     </Link>
                                                     <button 
                                                         onClick={() => handleDelete(product.id)}
-                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
-                                                        title="Delete"
+                                                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                                                     >
                                                         <Trash2 size={18} />
                                                     </button>
@@ -242,12 +222,7 @@ export default function AdminProductsPage() {
                         </div>
                     ) : (
                         <div className="p-20 text-center text-gray-400">
-                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Search size={24} />
-                            </div>
-                            <h3 className="text-lg font-bold text-navy-900">No products found</h3>
-                            <p className="text-sm">Try adjusting your search or filter to find what you're looking for.</p>
-                            <button onClick={() => {setSearchQuery(""); setSelectedCategory("All")}} className="mt-4 text-blue-600 font-bold hover:underline">Clear Filters</button>
+                            <p>No products found.</p>
                         </div>
                     )}
                 </div>
