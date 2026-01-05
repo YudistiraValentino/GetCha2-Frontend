@@ -117,7 +117,7 @@ export default function AdminProductsPage() {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                     <div>
                         <h1 className="text-3xl font-bold text-navy-900">Products Inventory</h1>
-                        <p className="text-gray-500 text-sm">Manage and sync your cafe menu images.</p>
+                        <p className="text-gray-500 text-sm">Manage and sync your cafe menu items.</p>
                     </div>
                     <Link href="/admin/products/create">
                         <button className="bg-navy-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-gold-500 hover:text-navy-900 transition-all shadow-lg">
@@ -208,15 +208,15 @@ export default function AdminProductsPage() {
                                             </td>
                                             <td className="p-6 text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {/* ✅ FIX: Edit Link directed to the specific edit page */}
-                                                    <Link href={`/admin/products/${product.id}/edit`}>
-                                                        <button className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                                                    {/* ✅ FIX: Link diarahkan ke [id]/page.tsx kamu */}
+                                                    <Link href={`/admin/products/${product.id}`}>
+                                                        <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                                                             <Edit size={18} />
                                                         </button>
                                                     </Link>
                                                     <button 
                                                         onClick={() => handleDelete(product.id)}
-                                                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
+                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
                                                         title="Delete"
                                                     >
                                                         <Trash2 size={18} />
