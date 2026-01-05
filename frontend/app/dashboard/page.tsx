@@ -57,12 +57,15 @@ export default function DashboardPage() {
       } catch (error) { console.error(error); }
   };
 
-  // ✅ FIX: Ambil gambar dari public/images/
-  const getImageUrl = (path: string) => {
-    if (!path) return "/images/food.jpg";
-    if (path.startsWith("http")) return path;
-    const fileName = path.split('/').pop(); // ambil nama filenya aja
-    return `/images/${fileName}`;
+  // ✅ FIX: Logika Gambar Cloud (Anti-404)
+  const getImageUrl = (p: any) => {
+    const name = (p.name || "").toLowerCase();
+    const cat = (p.category_name || "").toLowerCase();
+    if (name.includes("coffee") || name.includes("kopi") || cat.includes("coffee")) 
+        return "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop";
+    if (name.includes("snack") || name.includes("cake") || cat.includes("snack") || cat.includes("dessert")) 
+        return "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=400&h=400&fit=crop";
+    return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop";
   };
 
   const newArrivals = useMemo(() => [...products].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 4), [products]);
@@ -77,22 +80,22 @@ export default function DashboardPage() {
       <div className="container mx-auto px-4 md:px-12 pt-28 space-y-12 pb-20">
         <HeroCarousel slides={heroSlidesData} />
         <section>
-            <h2 className="text-2xl font-bold mb-6">New Arrivals</h2>
+            <h2 className="text-2xl font-bold mb-6 text-navy-900">New Arrivals</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {newArrivals.map((p: any) => (
-                    <ProductCard key={p.id} product={{...p, image: getImageUrl(p.image), price: parseFloat(p.price)}} />
+                    <ProductCard key={p.id} product={{...p, image: getImageUrl(p), price: parseFloat(p.price)}} />
                 ))}
             </div>
         </section>
         <section>
-            <div className="flex gap-2 overflow-x-auto pb-4">
+            <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
                 {categories.map(cat => (
-                    <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-6 py-2 rounded-full text-sm font-bold ${activeCategory === cat ? "bg-navy-900 text-white" : "bg-gray-100"}`}>{cat}</button>
+                    <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-6 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeCategory === cat ? "bg-navy-900 text-white" : "bg-gray-100"}`}>{cat}</button>
                 ))}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {filteredProducts.map((p: any) => (
-                    <ProductCard key={p.id} product={{...p, image: getImageUrl(p.image), price: parseFloat(p.price)}} />
+                    <ProductCard key={p.id} product={{...p, image: getImageUrl(p), price: parseFloat(p.price)}} />
                 ))}
             </div>
         </section>
