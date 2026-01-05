@@ -8,7 +8,7 @@ import {
   Minus, Plus, ShoppingBag, Heart, ChevronRight, Info, Loader2, CheckCircle2, Star, Clock 
 } from "lucide-react";
 import { useRouter, useParams } from 'next/navigation';
-import Image from "next/image"; // Menggunakan Image Next.js untuk optimasi
+import Image from "next/image";
 
 // ✅ URL Backend Railway
 const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
@@ -40,7 +40,6 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   
   const [qty, setQty] = useState(1);
-  const [activeImage, setActiveImage] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
 
   // State untuk Variasi & Modifier
@@ -51,24 +50,23 @@ export default function ProductDetailPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // 🔥 HELPER: Fix URL Gambar
-  const getImageUrl = (path: string) => {
-    if (!path) return "/Image/placeholder.png";
-    if (path.startsWith("http")) return path;
+  // ✅ FIX: SINKRONISASI GAMBAR (Sama persis dengan Menu, Dashboard & Admin)
+  const getImageUrl = (p: ProductDetail) => {
+    const productId = p.id || 0;
+    const name = (p.name || "").toLowerCase();
+    const cat = (p.category_name || "").toLowerCase();
 
-    const BACKEND_URL = "https://getcha2-backend-production.up.railway.app";
-    let cleanPath = path.replace('public/', '');
-    if (!cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
+    const coffeeImages = ["https://images.unsplash.com/photo-1509042239860-f550ce710b93","https://images.unsplash.com/photo-1495474472287-4d71bcdd2085","https://images.unsplash.com/photo-1506372023823-741c83b836fe","https://images.unsplash.com/photo-1497933322477-911f3c7a89c8","https://images.unsplash.com/photo-1541167760496-162955ed8a9f","https://images.unsplash.com/photo-1498804103079-a6351b050096","https://images.unsplash.com/photo-1511920170033-f8396924c348","https://images.unsplash.com/photo-1525193612562-0ec53b0e5d7c","https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd","https://images.unsplash.com/photo-1459755486867-b55449bb39ff"];
+    const nonCoffeeImages = ["https://images.unsplash.com/photo-1556679343-c7306c1976bc","https://images.unsplash.com/photo-1597318181409-cf44d0582db8","https://images.unsplash.com/photo-1576092729250-19c137184b8c","https://images.unsplash.com/photo-1544787210-2213d84ad960","https://images.unsplash.com/photo-1536935338212-3b6abf17ac42","https://images.unsplash.com/photo-1623065422902-30a2ad299dd4","https://images.unsplash.com/photo-1585225442642-c41236125451","https://images.unsplash.com/photo-1556881286-fc6915169721","https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd","https://images.unsplash.com/photo-1556710807-a9261973328e"];
+    const foodImages = ["https://images.unsplash.com/photo-1546069901-ba9599a7e63c","https://images.unsplash.com/photo-1567620905732-2d1ec7bb7445","https://images.unsplash.com/photo-1565299624946-b28f40a0ae38","https://images.unsplash.com/photo-1482049016688-2d3e1b311543","https://images.unsplash.com/photo-1504674900247-0877df9cc836","https://images.unsplash.com/photo-1473093226795-af9932fe5856","https://images.unsplash.com/photo-1555939594-58d7cb561ad1","https://images.unsplash.com/photo-1540189549336-e6e99c3679fe","https://images.unsplash.com/photo-1565958011703-44f9829ba187","https://images.unsplash.com/photo-1512621776951-a57141f2eefd"];
+    const snackImages = ["https://images.unsplash.com/photo-1551024601-bec78aea704b","https://images.unsplash.com/photo-1495147466023-ac5c588e2e94","https://images.unsplash.com/photo-1558961363-fa8fdf82db35","https://images.unsplash.com/photo-1509365465985-25d11c17e812","https://images.unsplash.com/photo-1530610476181-d83430b64dcd","https://images.unsplash.com/photo-1573821663912-569905445661","https://images.unsplash.com/photo-1582298538104-fe2e74c27f59","https://images.unsplash.com/photo-1559339352-11d035aa65de","https://images.unsplash.com/photo-1579306194872-64d3b7bac4c2","https://images.unsplash.com/photo-1519915028121-7d3463d20b13"];
 
-    if (
-      !cleanPath.startsWith('/storage') && 
-      !cleanPath.startsWith('/images') && 
-      !cleanPath.startsWith('/maps')
-    ) {
-      cleanPath = '/storage' + cleanPath;
-    }
+    let coll = foodImages;
+    if (cat.includes("non coffee") || name.includes("tea") || name.includes("matcha")) coll = nonCoffeeImages;
+    else if (cat.includes("coffee") || name.includes("kopi") || name.includes("latte")) coll = coffeeImages;
+    else if (cat.includes("snack") || cat.includes("dessert") || name.includes("cake") || name.includes("pastry")) coll = snackImages;
 
-    return `${BACKEND_URL}${cleanPath}`;
+    return `${coll[productId % 10]}?w=800&h=800&fit=crop`; // Ukuran lebih besar untuk detail
   };
 
   useEffect(() => {
@@ -81,18 +79,22 @@ export default function ProductDetailPage() {
 
         if (json.success) {
           const data = json.data;
-          setProduct(data);
-          setActiveImage(data.image);
+          // Ensure category_name exists for getImageUrl logic
+          const cleanData = {
+              ...data,
+              category_name: data.category ? data.category.name : (data.category_name || "Uncategorized")
+          };
+          setProduct(cleanData);
 
           // Set Default Variant
-          if (data.variants && data.variants.length > 0) {
-              setSelectedVariant(data.variants[0]);
+          if (cleanData.variants && cleanData.variants.length > 0) {
+              setSelectedVariant(cleanData.variants[0]);
           }
 
           // Set Default Modifiers
-          if (data.modifiers && data.modifiers.length > 0) {
+          if (cleanData.modifiers && cleanData.modifiers.length > 0) {
               const defaults: any = {};
-              data.modifiers.forEach((mod: any) => {
+              cleanData.modifiers.forEach((mod: any) => {
                   if (mod.options && mod.options.length > 0) {
                       const defaultOpt = mod.options.find((opt: any) => opt.isDefault) || mod.options[0];
                       defaults[mod.name] = defaultOpt;
@@ -128,9 +130,8 @@ export default function ProductDetailPage() {
   const handleAddToCartWrapper = () => {
     if (!product) return;
     
-    setIsAdding(true); // Mulai animasi loading
+    setIsAdding(true);
 
-    // Simulasi delay sedikit agar animasi terlihat smooth
     setTimeout(() => {
         const finalUnitPrice = calculateTotal() / qty;
 
@@ -138,7 +139,7 @@ export default function ProductDetailPage() {
             id: product.id,
             name: product.name,
             price: finalUnitPrice,
-            image: getImageUrl(product.image),
+            image: getImageUrl(product), // Menggunakan getImageUrl sinkron
             category: product.category_name || "Uncategorized",
             quantity: qty,
             selectedVariant: selectedVariant?.name,
@@ -148,9 +149,8 @@ export default function ProductDetailPage() {
         });
 
         setIsAdding(false);
-        setIsSuccess(true); // Munculkan ceklis hijau
+        setIsSuccess(true);
 
-        // Hilangkan status sukses setelah 2 detik
         setTimeout(() => setIsSuccess(false), 2000);
     }, 600);
   };
@@ -184,19 +184,17 @@ export default function ProductDetailPage() {
             {/* --- LEFT: PRODUCT IMAGE (STICKY) --- */}
             <div className="relative lg:sticky lg:top-32">
                 <div className="relative aspect-square bg-white rounded-[2.5rem] shadow-xl shadow-navy-900/5 overflow-hidden border border-gray-100 group">
-                    {/* Background Blob Dekorasi */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-gold-50 rounded-full blur-3xl opacity-60"></div>
                     
-                    {/* Main Image */}
                     <div className="absolute inset-0 p-10 flex items-center justify-center">
+                        {/* Menggunakan getImageUrl(product) */}
                         <img 
-                            src={getImageUrl(activeImage)} 
+                            src={getImageUrl(product)} 
                             alt={product.name} 
-                            className="w-full h-full object-contain transition-transform duration-700 hover:scale-110 drop-shadow-2xl z-10" 
+                            className="w-full h-full object-cover transition-transform duration-700 hover:scale-110 drop-shadow-2xl z-10" 
                         />
                     </div>
 
-                    {/* Favorite Button */}
                     <button 
                         onClick={() => setIsFavorite(!isFavorite)} 
                         className="absolute top-6 right-6 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all z-20 group/fav"
@@ -204,35 +202,14 @@ export default function ProductDetailPage() {
                         <Heart size={22} className={`transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-300 group-hover/fav:text-red-400"}`} />
                     </button>
                 </div>
-
-                {/* Thumbnails */}
-                {product.images && product.images.length > 1 && (
-                    <div className="flex gap-4 mt-6 overflow-x-auto pb-2 no-scrollbar justify-center lg:justify-start">
-                        {product.images.map((img, idx) => (
-                            <button 
-                                key={idx} 
-                                onClick={() => setActiveImage(img)} 
-                                className={`relative w-20 h-20 rounded-2xl bg-white border-2 overflow-hidden shrink-0 transition-all ${activeImage === img ? 'border-navy-900 ring-2 ring-gold-200' : 'border-transparent opacity-60 hover:opacity-100'}`}
-                            >
-                                <img 
-                                    src={getImageUrl(img)} 
-                                    alt="thumb" 
-                                    className="w-full h-full object-contain p-2" 
-                                />
-                            </button>
-                        ))}
-                    </div>
-                )}
             </div>
 
-            {/* --- RIGHT: PRODUCT DETAILS & OPTIONS --- */}
+            {/* --- RIGHT: PRODUCT DETAILS --- */}
             <div className="flex flex-col gap-8">
-                
-                {/* Header Info */}
                 <div>
                     <div className="flex items-center gap-3 mb-4">
                         <span className="px-3 py-1 bg-navy-50 text-navy-900 text-[10px] font-bold uppercase tracking-wider rounded-lg">
-                            {product.category_name || "Specialty"}
+                            {product.category_name}
                         </span>
                         <div className="flex items-center gap-1 text-gold-500">
                             <Star size={14} fill="currentColor" />
@@ -245,17 +222,14 @@ export default function ProductDetailPage() {
                     </h1>
                     
                     <p className="text-gray-500 text-lg leading-relaxed">
-                        {product.description || "Rasakan kenikmatan menu spesial kami yang dibuat dengan bahan premium."}
+                        {product.description}
                     </p>
 
-                    {/* Nutrition Grid */}
                     {nutrition && (
                         <div className="grid grid-cols-3 gap-4 mt-6 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
                             <div className="text-center">
                                 <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Calories</p>
-                                <p className="text-navy-900 font-bold flex items-center justify-center gap-1">
-                                    <Info size={12} className="text-gold-500"/> {nutrition.calories}
-                                </p>
+                                <p className="text-navy-900 font-bold flex items-center justify-center gap-1">{nutrition.calories}</p>
                             </div>
                             <div className="text-center border-l border-gray-100">
                                 <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Sugar</p>
@@ -271,58 +245,38 @@ export default function ProductDetailPage() {
 
                 <div className="h-px w-full bg-gray-200"></div>
 
-                {/* --- CUSTOMIZATION SECTION --- */}
                 <div className="space-y-8">
-                    
-                    {/* 1. VARIANTS (Size, dll) */}
                     {product.variants && product.variants.length > 0 && (
                         <div>
-                            <h3 className="font-bold text-navy-900 mb-4 text-sm uppercase tracking-wide flex items-center gap-2">
-                                Select Size
-                            </h3>
+                            <h3 className="font-bold text-navy-900 mb-4 text-sm uppercase tracking-wide flex items-center gap-2">Select Size</h3>
                             <div className="flex flex-wrap gap-3">
                                 {product.variants?.map((variant, idx) => (
                                     <button 
                                         key={idx} 
                                         onClick={() => setSelectedVariant(variant)} 
-                                        className={`
-                                            px-6 py-3 rounded-2xl border text-sm font-bold transition-all duration-200 flex flex-col items-center min-w-[100px]
-                                            ${selectedVariant?.name === variant.name 
-                                                ? 'bg-navy-900 text-white border-navy-900 shadow-lg shadow-navy-900/20 transform scale-105' 
-                                                : 'bg-white text-gray-500 border-gray-200 hover:border-gold-500 hover:text-navy-900'}
-                                        `}
+                                        className={`px-6 py-3 rounded-2xl border text-sm font-bold transition-all duration-200 flex flex-col items-center min-w-[100px] ${selectedVariant?.name === variant.name ? 'bg-navy-900 text-white border-navy-900 shadow-lg' : 'bg-white text-gray-500 border-gray-200 hover:border-gold-500'}`}
                                     >
                                         <span>{variant.name}</span>
-                                        <span className={`text-[10px] mt-1 ${selectedVariant?.name === variant.name ? 'text-gold-500' : 'opacity-70'}`}>
-                                            Rp {parseFloat(variant.price.toString()).toLocaleString()}
-                                        </span>
+                                        <span className={`text-[10px] mt-1 ${selectedVariant?.name === variant.name ? 'text-gold-500' : 'opacity-70'}`}>Rp {parseFloat(variant.price.toString()).toLocaleString()}</span>
                                     </button>
                                 ))}
                             </div>
                         </div>
                     )}
 
-                    {/* 2. MODIFIERS (Topping, Sugar, dll) */}
                     {product.modifiers && product.modifiers.length > 0 && product.modifiers.map((mod, idx) => (
                         <div key={idx}>
                             <h3 className="font-bold text-navy-900 mb-3 text-sm flex items-center justify-between uppercase tracking-wide">
                                 <span>{mod.name}</span>
-                                {mod.required && <span className="text-red-500 text-[10px] bg-red-50 px-2 py-0.5 rounded-full font-bold normal-case">Required</span>}
                             </h3>
                             <div className="flex flex-wrap gap-2">
                                 {mod.options?.map((opt, oIdx) => (
                                     <button 
                                         key={oIdx} 
                                         onClick={() => setSelectedModifiers({...selectedModifiers, [mod.name]: opt})} 
-                                        className={`
-                                            px-4 py-2.5 rounded-full border text-xs font-bold transition-all duration-200
-                                            ${selectedModifiers[mod.name]?.label === opt.label 
-                                                ? 'bg-gold-50 text-gold-700 border-gold-500 shadow-sm' 
-                                                : 'bg-white text-gray-500 border-gray-200 hover:border-navy-900 hover:text-navy-900'}
-                                        `}
+                                        className={`px-4 py-2.5 rounded-full border text-xs font-bold transition-all ${selectedModifiers[mod.name]?.label === opt.label ? 'bg-gold-50 text-gold-700 border-gold-500 shadow-sm' : 'bg-white text-gray-500 border-gray-200'}`}
                                     >
-                                        {opt.label}
-                                        {opt.priceChange ? ` (+${(opt.priceChange/1000)}k)` : ''}
+                                        {opt.label} {opt.priceChange ? ` (+${(opt.priceChange/1000)}k)` : ''}
                                     </button>
                                 ))}
                             </div>
@@ -330,68 +284,32 @@ export default function ProductDetailPage() {
                     ))}
                 </div>
 
-                {/* --- BOTTOM ACTION BAR --- */}
-                <div className="bg-white p-6 rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 mt-4 sticky bottom-6 z-30">
+                <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-gray-100 mt-4 sticky bottom-6 z-30">
                     <div className="flex flex-col gap-6">
-                        
-                        {/* Qty & Total */}
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4 bg-gray-50 rounded-full px-2 py-1.5 border border-gray-200">
-                                <button 
-                                    onClick={() => setQty(Math.max(1, qty-1))} 
-                                    className="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm hover:bg-gray-100 transition-colors text-navy-900"
-                                >
-                                    <Minus size={18}/>
-                                </button>
+                                <button onClick={() => setQty(Math.max(1, qty-1))} className="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm text-navy-900"><Minus size={18}/></button>
                                 <span className="font-black text-navy-900 w-8 text-center text-lg">{qty}</span>
-                                <button 
-                                    onClick={() => setQty(qty+1)} 
-                                    className="w-10 h-10 flex items-center justify-center bg-navy-900 text-white rounded-full shadow-sm hover:bg-navy-800 transition-colors"
-                                >
-                                    <Plus size={18}/>
-                                </button>
+                                <button onClick={() => setQty(qty+1)} className="w-10 h-10 flex items-center justify-center bg-navy-900 text-white rounded-full shadow-sm"><Plus size={18}/></button>
                             </div>
                             <div className="text-right">
                                 <p className="text-[10px] text-gray-400 uppercase font-bold mb-1 tracking-wider">Total Amount</p>
-                                <p className="text-3xl font-black text-navy-900 leading-none">
-                                    Rp {calculateTotal().toLocaleString('id-ID')}
-                                </p>
+                                <p className="text-3xl font-black text-navy-900">Rp {calculateTotal().toLocaleString('id-ID')}</p>
                             </div>
                         </div>
 
-                        {/* Add to Cart Button */}
                         <button 
                             onClick={handleAddToCartWrapper}
                             disabled={isAdding || isSuccess} 
-                            className={`
-                                w-full py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all duration-300 transform active:scale-[0.98] shadow-xl
-                                ${isSuccess 
-                                    ? "bg-green-500 text-white shadow-green-500/30" 
-                                    : "bg-navy-900 text-white hover:bg-gold-500 hover:text-navy-900 shadow-navy-900/20"
-                                }
-                            `}
+                            className={`w-full py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all shadow-xl ${isSuccess ? "bg-green-500 text-white shadow-green-500/30" : "bg-navy-900 text-white hover:bg-gold-500 shadow-navy-900/20"}`}
                         >
-                            {isAdding ? (
-                                <>
-                                    <Loader2 className="animate-spin" /> Adding...
-                                </>
-                            ) : isSuccess ? (
-                                <>
-                                    <CheckCircle2 /> Added to Cart!
-                                </>
-                            ) : (
-                                <>
-                                    <ShoppingBag size={22} /> Add to Cart
-                                </>
-                            )}
+                            {isAdding ? <Loader2 className="animate-spin" /> : isSuccess ? <><CheckCircle2 /> Added!</> : <><ShoppingBag size={22} /> Add to Cart</>}
                         </button>
                     </div>
                 </div>
-
             </div>
         </div>
       </div>
-      
       <Footer />
     </main>
   );
