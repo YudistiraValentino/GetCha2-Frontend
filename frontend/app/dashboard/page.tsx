@@ -25,6 +25,7 @@ interface ProductAPI {
   image: string;
   created_at: string; 
   is_promo: number;
+  category?: { name: string };
 }
 
 interface OrderAPI {
@@ -58,21 +59,26 @@ export default function DashboardPage() {
     fetchMenu();
   }, []);
 
+  // ✅ REALTIME LISTENER: Update Status Order Otomatis saat Admin Klik Confirmed/Paid/Ready
   useEffect(() => {
     if (user) {
         const echo = createEcho();
         if (echo) {
             echo.channel('public-orders')
                 .listen('.order.updated', (e: any) => {
+                    // Cek apakah order ini milik user yang sedang login
                     if (e.order.customer_name === user.name) {
                         setMyOrders((prevOrders) => {
                             const exists = prevOrders.find(o => o.id === e.order.id);
                             if (exists) {
-                                return prevOrders.map(o => o.id === e.order.id ? { ...o, ...e.order, items: o.items } : o);
+                                // Update status order yang sudah ada di list
+                                return prevOrders.map(o => o.id === e.order.id ? { ...o, ...e.order } : o);
                             } else {
+                                // Tambahkan order baru jika belum ada
                                 return [e.order, ...prevOrders];
                             }
                         });
+                        // Munculkan Popup Notifikasi
                         setNotification(e.order);
                     }
                 });
@@ -86,7 +92,7 @@ export default function DashboardPage() {
       const res = await fetch(`${BACKEND_URL}/api/menu`);
       const json = await res.json();
       if (json.success) {
-          // Sync category name logic exactly like Menu page
+          // ✅ FIX: Map agar category_name selalu tersedia untuk filter & gambar
           const mapped = json.data.map((p: any) => ({
               ...p,
               category_name: p.category ? p.category.name : (p.category_name || "Uncategorized")
@@ -149,8 +155,11 @@ export default function DashboardPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
         case 'pending': return 'bg-yellow-50 text-yellow-700 border-yellow-200 ring-yellow-500/20';
+        case 'confirmed': return 'bg-blue-50 text-blue-700 border-blue-200 ring-blue-500/20';
+        case 'processing': return 'bg-orange-50 text-orange-700 border-orange-200 ring-orange-500/20';
         case 'ready': return 'bg-green-50 text-green-700 border-green-200 ring-green-500/20';
         case 'completed': return 'bg-navy-900 text-gold-500 border-navy-900 ring-navy-900/20';
+        case 'cancelled': return 'bg-red-50 text-red-700 border-red-200 ring-red-500/20';
         default: return 'bg-gray-100 text-gray-600 ring-gray-500/20';
     }
   };
@@ -201,6 +210,7 @@ export default function DashboardPage() {
                             </Link>
                         </div>
 
+                        {/* ✅ REALTIME ORDER LIST */}
                         <div className="mt-8 pt-8 border-t border-gray-100 relative z-10">
                             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-4">
                                 <Receipt size={14} /> Recent Orders
@@ -208,9 +218,12 @@ export default function DashboardPage() {
                             {myOrders.length > 0 ? (
                                 <div className="grid gap-4 md:grid-cols-2">
                                     {myOrders.slice(0, 2).map(order => (
-                                        <div key={order.id} className="border border-gray-100 rounded-2xl p-5 bg-white">
+                                        <div key={order.id} className="border border-gray-100 rounded-2xl p-5 bg-white shadow-sm hover:border-gold-300 transition-all">
                                             <div className="flex justify-between items-start mb-3">
-                                                <span className="font-bold text-navy-900 block">Order #{order.order_number}</span>
+                                                <div>
+                                                    <span className="font-bold text-navy-900 block">Order #{order.order_number}</span>
+                                                    <span className="text-[10px] text-gray-400">{new Date(order.created_at).toLocaleDateString()}</span>
+                                                </div>
                                                 <span className={`text-[10px] uppercase font-bold px-3 py-1 rounded-full border ring-1 ${getStatusColor(order.status)}`}>
                                                     {order.status}
                                                 </span>
@@ -220,7 +233,7 @@ export default function DashboardPage() {
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-sm text-gray-400">No active orders right now.</p>
+                                <p className="text-sm text-gray-400 italic">No active orders right now.</p>
                             )}
                         </div>
                     </div>
@@ -248,20 +261,21 @@ export default function DashboardPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {newArrivals.map((product) => (
                   <div key={product.id} className="relative h-full group hover:-translate-y-2 transition-transform duration-300">
+                      {isNewBadge(product.created_at) && <div className="absolute -top-3 -right-3 z-20"><span className="relative flex h-8 w-16"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span><span className="relative inline-flex items-center justify-center rounded-full h-8 w-16 bg-navy-900 border-2 border-white shadow-lg"><span className="text-[10px] font-black text-gold-500 italic tracking-wider">NEW!</span></span></span></div>}
                       <ProductCard product={mapToCard(product)} />
                   </div>
                 ))}
               </div>
             </section>
 
-            {/* FULL MENU SECTION WITH FILTER */}
+            {/* ✅ FULL MENU SECTION WITH FILTER CATEGORY */}
             <section id="menu-section">
                 <div className="sticky top-20 z-30 bg-white/80 backdrop-blur-xl py-4 mb-8 transition-all border-b border-gray-100 -mx-4 px-4 md:-mx-12 md:px-12 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)]">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 container mx-auto">
                         <h2 className="text-2xl font-bold text-navy-900 flex items-center gap-2">
                             Full Menu <span className="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-1 rounded-full">{products.length} Items</span>
                         </h2>
-                        {/* ✅ ADDED: CATEGORY FILTER FOR FULL MENU */}
+                        {/* ✅ Filter Kategori di Full Menu */}
                         <div className="flex overflow-x-auto pb-1 gap-2 w-full md:w-auto no-scrollbar">
                             {categories.map((cat) => (
                                 <button 
