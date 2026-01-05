@@ -85,7 +85,14 @@ export default function DashboardPage() {
     try {
       const res = await fetch(`${BACKEND_URL}/api/menu`);
       const json = await res.json();
-      if (json.success) setProducts(json.data);
+      if (json.success) {
+          // Sync category name logic exactly like Menu page
+          const mapped = json.data.map((p: any) => ({
+              ...p,
+              category_name: p.category ? p.category.name : (p.category_name || "Uncategorized")
+          }));
+          setProducts(mapped);
+      }
     } catch (error) { console.error("Gagal fetch menu:", error); } finally { setLoading(false); }
   };
 
@@ -100,7 +107,7 @@ export default function DashboardPage() {
       } catch (error) { console.error(error); }
   };
 
-  // ✅ FIX: 4 Kategori x 10 Varian (Unsplash)
+  // ✅ SINKRONISASI GAMBAR (Sama persis dengan Menu Page)
   const getImageUrl = (p: ProductAPI) => {
     const id = p.id || 0;
     const name = (p.name || "").toLowerCase();
@@ -119,10 +126,6 @@ export default function DashboardPage() {
     return `${collection[id % 10]}?w=500&h=500&fit=crop`;
   };
 
-  const newArrivals = useMemo(() => [...products].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 4), [products]);
-  const categories = useMemo(() => ["All", ...Array.from(new Set(products.map(p => p.category_name)))], [products]);
-  const filteredProducts = activeCategory === "All" ? products : products.filter(p => p.category_name === activeCategory);
-  
   const mapToCard = (p: ProductAPI) => ({
     id: p.id, 
     name: p.name, 
@@ -133,6 +136,10 @@ export default function DashboardPage() {
     createdAt: p.created_at, 
     soldCount: 0, 
   });
+
+  const newArrivals = useMemo(() => [...products].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 4), [products]);
+  const categories = useMemo(() => ["All", ...Array.from(new Set(products.map(p => p.category_name)))], [products]);
+  const filteredProducts = activeCategory === "All" ? products : products.filter(p => p.category_name === activeCategory);
   
   const isNewBadge = (dateString: string) => {
     const diffDays = Math.ceil(Math.abs(new Date().getTime() - new Date(dateString).getTime()) / (1000 * 60 * 60 * 24)); 
@@ -142,11 +149,8 @@ export default function DashboardPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
         case 'pending': return 'bg-yellow-50 text-yellow-700 border-yellow-200 ring-yellow-500/20';
-        case 'confirmed': return 'bg-blue-50 text-blue-700 border-blue-200 ring-blue-500/20';
-        case 'processing': return 'bg-orange-50 text-orange-700 border-orange-200 ring-orange-500/20';
         case 'ready': return 'bg-green-50 text-green-700 border-green-200 ring-green-500/20';
         case 'completed': return 'bg-navy-900 text-gold-500 border-navy-900 ring-navy-900/20';
-        case 'cancelled': return 'bg-red-50 text-red-700 border-red-200 ring-red-500/20';
         default: return 'bg-gray-100 text-gray-600 ring-gray-500/20';
     }
   };
@@ -155,6 +159,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-[#FAFAFA] font-sans flex flex-col justify-between selection:bg-gold-200">
+      
       <AnimatePresence>
         {notification && (
             <OrderNotification 
@@ -167,7 +172,10 @@ export default function DashboardPage() {
 
       <div>
           <NavbarDashboard />
+
           <div className="container mx-auto px-4 md:px-12 pt-28 space-y-20 pb-20">
+            
+            {/* WELCOME SECTION */}
             {user && (
                 <section className="animate-in slide-in-from-top-4 fade-in duration-700">
                     <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden group">
@@ -192,41 +200,27 @@ export default function DashboardPage() {
                                 Start New Order
                             </Link>
                         </div>
+
                         <div className="mt-8 pt-8 border-t border-gray-100 relative z-10">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                    <Receipt size={14} /> Recent Orders
-                                </h3>
-                            </div>
+                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-4">
+                                <Receipt size={14} /> Recent Orders
+                            </h3>
                             {myOrders.length > 0 ? (
                                 <div className="grid gap-4 md:grid-cols-2">
                                     {myOrders.slice(0, 2).map(order => (
-                                        <div key={order.id} className="group border border-gray-100 rounded-2xl p-5 bg-white hover:border-gold-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-300">
+                                        <div key={order.id} className="border border-gray-100 rounded-2xl p-5 bg-white">
                                             <div className="flex justify-between items-start mb-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-navy-900 group-hover:bg-gold-100 group-hover:text-gold-700 transition-colors">
-                                                        <Clock size={18} />
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-bold text-navy-900 block">Order #{order.order_number}</span>
-                                                        <span className="text-xs text-gray-400">{new Date(order.created_at).toLocaleDateString()}</span>
-                                                    </div>
-                                                </div>
+                                                <span className="font-bold text-navy-900 block">Order #{order.order_number}</span>
                                                 <span className={`text-[10px] uppercase font-bold px-3 py-1 rounded-full border ring-1 ${getStatusColor(order.status)}`}>
                                                     {order.status}
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between items-center pl-[52px]">
-                                                <p className="text-xs text-gray-500 font-medium">{order.items?.length || 0} Items</p>
-                                                <p className="font-bold text-navy-900 text-sm">Rp {parseInt(order.total_price || "0").toLocaleString()}</p>
-                                            </div>
+                                            <p className="font-bold text-navy-900 text-sm">Rp {parseInt(order.total_price || "0").toLocaleString()}</p>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="flex flex-col items-center justify-center py-8 text-gray-400 bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-200">
-                                    <p className="text-sm font-medium">No active orders right now.</p>
-                                </div>
+                                <p className="text-sm text-gray-400">No active orders right now.</p>
                             )}
                         </div>
                     </div>
@@ -235,6 +229,7 @@ export default function DashboardPage() {
 
             <section><HeroCarousel slides={heroSlidesData} /></section>
 
+            {/* NEW ARRIVALS */}
             <section>
               <div className="flex justify-between items-end mb-8 pb-4 border-b border-gray-200">
                 <div className="flex items-center gap-4">
@@ -246,33 +241,41 @@ export default function DashboardPage() {
                         <h2 className="text-2xl md:text-4xl font-extrabold text-navy-900 leading-none">New <span className="text-gold-500 underline decoration-4 underline-offset-4 decoration-gold-200">Arrivals</span></h2>
                     </div>
                 </div>
-                <Link href="/menu" className="hidden md:flex text-navy-900 font-bold text-sm hover:text-gold-600 transition-colors items-center gap-2 group bg-white px-4 py-2 rounded-full border border-gray-200">
+                <Link href="/menu" className="hidden md:flex text-navy-900 font-bold text-sm hover:text-gold-600 transition-colors items-center gap-2 group bg-white px-4 py-2 rounded-full border border-gray-200 hover:border-gold-500 shadow-sm">
                     View All <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform"/>
                 </Link>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {newArrivals.map((product) => (
                   <div key={product.id} className="relative h-full group hover:-translate-y-2 transition-transform duration-300">
-                      {isNewBadge(product.created_at) && <div className="absolute -top-3 -right-3 z-20"><span className="relative flex h-8 w-16"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span><span className="relative inline-flex items-center justify-center rounded-full h-8 w-16 bg-navy-900 border-2 border-white shadow-lg"><span className="text-[10px] font-black text-gold-500 italic tracking-wider">NEW!</span></span></span></div>}
                       <ProductCard product={mapToCard(product)} />
                   </div>
                 ))}
               </div>
             </section>
 
+            {/* FULL MENU SECTION WITH FILTER */}
             <section id="menu-section">
                 <div className="sticky top-20 z-30 bg-white/80 backdrop-blur-xl py-4 mb-8 transition-all border-b border-gray-100 -mx-4 px-4 md:-mx-12 md:px-12 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)]">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 container mx-auto">
                         <h2 className="text-2xl font-bold text-navy-900 flex items-center gap-2">
                             Full Menu <span className="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-1 rounded-full">{products.length} Items</span>
                         </h2>
+                        {/* ✅ ADDED: CATEGORY FILTER FOR FULL MENU */}
                         <div className="flex overflow-x-auto pb-1 gap-2 w-full md:w-auto no-scrollbar">
                             {categories.map((cat) => (
-                                <button key={cat} onClick={() => setActiveCategory(cat)} className={`whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all border ${activeCategory === cat ? "bg-navy-900 text-white border-navy-900" : "bg-gray-50 text-gray-500 hover:text-navy-900"}`}>{cat}</button>
+                                <button 
+                                    key={cat} 
+                                    onClick={() => setActiveCategory(cat)} 
+                                    className={`whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all border transform active:scale-95 ${activeCategory === cat ? "bg-navy-900 text-white border-navy-900 shadow-lg ring-2 ring-navy-900 ring-offset-2" : "bg-gray-50 text-gray-500 border-transparent hover:bg-white hover:border-gold-200 hover:text-navy-900 hover:shadow-sm"}`}
+                                >
+                                    {cat}
+                                </button>
                             ))}
                         </div>
                     </div>
                 </div>
+                
                 <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 min-h-[400px]">
                     <AnimatePresence mode='popLayout'>
                         {filteredProducts.map((product) => (
